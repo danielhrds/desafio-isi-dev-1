@@ -119,6 +119,14 @@ function playerResponse(player: PlayerRecord, marketValue?: string) {
 }
 
 export const playerService = {
+  async getPlayerById(id: number) {
+    const player = await playerRepository.findActiveById(id);
+    if (!player) {
+      throw new AppError(404, 'Jogador não encontrado.');
+    }
+    return playerResponse(player);
+  },
+
   async listPlayers(query: ListPlayersQuery) {
     const clubId = query.club_id ? Number(query.club_id) : undefined;
     if (clubId !== undefined && !(await playerRepository.clubExists(clubId))) {

@@ -16,6 +16,14 @@ export const listPlayers: RequestHandler = asyncHandler(
   },
 );
 
+export const getPlayerById: RequestHandler = asyncHandler(
+  async (request, response) => {
+    const id = parseResourceId(request.params.id);
+    const player = await playerService.getPlayerById(id);
+    response.status(200).json(player);
+  },
+);
+
 export const createPlayer: RequestHandler = asyncHandler(
   async (request, response) => {
     const input = createPlayerSchema.parse(request.body);

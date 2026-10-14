@@ -238,6 +238,70 @@ export const openApiDocument = {
       },
     },
     '/players/{id}': {
+      get: {
+        summary: 'Consulta um jogador ativo por id',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer', minimum: 1, maximum: 2147483647 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Jogador com overall e valor de mercado atuais',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: [
+                    'id',
+                    'name',
+                    'position',
+                    'agility',
+                    'age',
+                    'condition',
+                    'base_value',
+                    'market_value',
+                    'pace',
+                    'shooting',
+                    'passing',
+                    'dribbling',
+                    'defending',
+                    'physical',
+                    'potential',
+                    'overall',
+                    'club_id',
+                  ],
+                  properties: {
+                    id: { type: 'integer' },
+                    name: { type: 'string' },
+                    position: { type: 'string' },
+                    agility: { type: 'integer' },
+                    age: { type: 'integer' },
+                    condition: { type: 'string' },
+                    base_value: { type: 'number' },
+                    market_value: { type: 'number' },
+                    pace: { type: 'integer' },
+                    shooting: { type: 'integer' },
+                    passing: { type: 'integer' },
+                    dribbling: { type: 'integer' },
+                    defending: { type: 'integer' },
+                    physical: { type: 'integer' },
+                    potential: { type: 'integer' },
+                    overall: { type: 'integer' },
+                    club_id: { type: ['integer', 'null'] },
+                  },
+                },
+              },
+            },
+          },
+          '404': {
+            description: 'Jogador inexistente, excluído ou id inválido',
+          },
+        },
+      },
       put: {
         summary: 'Atualiza nome, posição, agilidade e idade de um jogador',
         parameters: [
