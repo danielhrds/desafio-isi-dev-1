@@ -39,6 +39,7 @@ export interface PlayerRecord extends PlayerCreate {
 
 interface RepositoryOptions {
   transaction?: Transaction;
+  forUpdate?: boolean;
 }
 
 function toRecord(player: Player): PlayerRecord {
@@ -81,6 +82,7 @@ export const playerRepository = {
   ): Promise<PlayerRecord | null> {
     const player = await Player.findByPk(id, {
       transaction: options.transaction,
+      lock: options.forUpdate ? options.transaction?.LOCK.UPDATE : undefined,
     });
     return player ? toRecord(player) : null;
   },

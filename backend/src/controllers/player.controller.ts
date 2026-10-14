@@ -1,12 +1,25 @@
 import type { RequestHandler } from 'express';
-import { createPlayerSchema } from '../schemas/player.schema.js';
+import {
+  createPlayerSchema,
+  updatePlayerSchema,
+} from '../schemas/player.schema.js';
 import { playerService } from '../services/player.service.js';
 import { asyncHandler } from '../middleware/async-handler.js';
+import { parseResourceId } from '../validation/resource-id.js';
 
 export const createPlayer: RequestHandler = asyncHandler(
   async (request, response) => {
     const input = createPlayerSchema.parse(request.body);
     const player = await playerService.createPlayer(input);
     response.location(`/api/v1/players/${player.id}`).status(201).json(player);
+  },
+);
+
+export const updatePlayer: RequestHandler = asyncHandler(
+  async (request, response) => {
+    const id = parseResourceId(request.params.id);
+    const input = updatePlayerSchema.parse(request.body);
+    const player = await playerService.updatePlayer(id, input);
+    response.status(200).json(player);
   },
 );

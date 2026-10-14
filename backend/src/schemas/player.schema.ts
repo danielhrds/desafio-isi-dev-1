@@ -17,3 +17,12 @@ export const createPlayerSchema = z.object({
 });
 
 export type CreatePlayerInput = z.infer<typeof createPlayerSchema>;
+
+export const updatePlayerSchema = z.object({
+  name: z.string(),
+  position: z.enum(['GOL', 'ZAG', 'LAT', 'MEI', 'ATA']),
+  agility: z.number().int().min(1).max(100),
+  age: z.number().int().min(16).max(45),
+});
+
+export type UpdatePlayerInput = z.infer<typeof updatePlayerSchema>;

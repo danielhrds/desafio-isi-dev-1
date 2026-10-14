@@ -89,6 +89,95 @@ export const openApiDocument = {
         },
       },
     },
+    '/players/{id}': {
+      put: {
+        summary: 'Atualiza nome, posição, agilidade e idade de um jogador',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer', minimum: 1, maximum: 2147483647 },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'position', 'agility', 'age'],
+                properties: {
+                  name: { type: 'string', example: 'Meia Lua' },
+                  position: {
+                    type: 'string',
+                    enum: ['GOL', 'ZAG', 'LAT', 'MEI', 'ATA'],
+                  },
+                  agility: { type: 'integer', minimum: 1, maximum: 100 },
+                  age: { type: 'integer', minimum: 16, maximum: 45 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description:
+              'Jogador atualizado, com o mesmo formato da resposta do cadastro',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: [
+                    'id',
+                    'name',
+                    'position',
+                    'agility',
+                    'age',
+                    'condition',
+                    'base_value',
+                    'market_value',
+                    'pace',
+                    'shooting',
+                    'passing',
+                    'dribbling',
+                    'defending',
+                    'physical',
+                    'potential',
+                    'overall',
+                    'club_id',
+                  ],
+                  properties: {
+                    id: { type: 'integer' },
+                    name: { type: 'string' },
+                    position: { type: 'string' },
+                    agility: { type: 'integer' },
+                    age: { type: 'integer' },
+                    condition: { type: 'string' },
+                    base_value: { type: 'number' },
+                    market_value: { type: 'number' },
+                    pace: { type: 'integer' },
+                    shooting: { type: 'integer' },
+                    passing: { type: 'integer' },
+                    dribbling: { type: 'integer' },
+                    defending: { type: 'integer' },
+                    physical: { type: 'integer' },
+                    potential: { type: 'integer' },
+                    overall: { type: 'integer' },
+                    club_id: { type: ['integer', 'null'] },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Corpo inválido' },
+          '404': { description: 'Jogador inexistente ou excluído' },
+          '409': {
+            description: 'Idade reduzida ou mudança de posição com clube',
+          },
+        },
+      },
+    },
     '/health': {
       get: {
         summary: 'Verifica se a API está disponível',

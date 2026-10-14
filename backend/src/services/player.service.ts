@@ -1,7 +1,12 @@
 import { AppError } from '../errors/app.error.js';
+import { sequelize } from '../database/sequelize.js';
+import type { PlayerProfileUpdate } from '../repositories/player.repository.js';
 import type { PlayerRecord } from '../repositories/player.repository.js';
 import { playerRepository } from '../repositories/player.repository.js';
-import type { CreatePlayerInput } from '../schemas/player.schema.js';
+import type {
+  CreatePlayerInput,
+  UpdatePlayerInput,
+} from '../schemas/player.schema.js';
 import {
   calculateBaseValue,
   calculateMarketValue,
@@ -33,9 +38,7 @@ export function normalizeAndValidatePlayerName(rawName: string): string {
 }
 
 export function validatePlayerCreationRules(input: CreatePlayerInput): void {
-  if (input.age >= 35 && input.agility > 85) {
-    throw new AppError(400, 'A agilidade máxima a partir de 35 anos é 85.');
-  }
+  validatePlayerAgeAndAgility(input);
 
   const attributes = [
     input.pace,
@@ -61,6 +64,15 @@ export function validatePlayerCreationRules(input: CreatePlayerInput): void {
       400,
       'O potencial não atende ao limite dos atributos e da idade.',
     );
+  }
+}
+
+function validatePlayerAgeAndAgility(input: {
+  age: number;
+  agility: number;
+}): void {
+  if (input.age >= 35 && input.agility > 85) {
+    throw new AppError(400, 'A agilidade máxima a partir de 35 anos é 85.');
   }
 }
 
@@ -116,5 +128,42 @@ export const playerService = {
       baseValue,
     });
     return playerResponse(player);
+  },
+
+  async updatePlayer(id: number, input: UpdatePlayerInput) {
+    const name = normalizeAndValidatePlayerName(input.name);
+    validatePlayerAgeAndAgility(input);
+
+    return sequelize.transaction(async (transaction) => {
+      const current = await playerRepository.findActiveById(id, {
+        transaction,
+        forUpdate: true,
+      });
+      if (!current) {
+        throw new AppError(404, 'Jogador não encontrado.');
+      }
+      if (input.age < current.age) {
+        throw new AppError(409, 'A idade não pode diminuir.');
+      }
+      if (current.clubId !== null && input.position !== current.position) {
+        throw new AppError(409, 'Jogador com clube não pode mudar de posição.');
+      }
+
+      const profile: PlayerProfileUpdate = {
+        name,
+        searchName: searchName(name),
+        position: input.position,
+        agility: input.agility,
+        age: input.age,
+      };
+      const updated = await playerRepository.updateProfile(id, profile, {
+        transaction,
+      });
+      if (!updated) {
+        throw new Error('A atualização de jogador bloqueado não foi gravada.');
+      }
+
+      return playerResponse({ ...current, ...profile });
+    });
   },
 };
