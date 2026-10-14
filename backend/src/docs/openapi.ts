@@ -9,6 +9,154 @@ export const openApiDocument = {
   servers: [{ url: 'http://localhost:3000/api/v1' }],
   paths: {
     '/players': {
+      get: {
+        summary: 'Lista jogadores com busca, filtros, ordenação e paginação',
+        parameters: [
+          {
+            name: 'search',
+            in: 'query',
+            schema: { type: 'string', minLength: 2, maxLength: 100 },
+          },
+          {
+            name: 'position',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: ['GOL', 'ZAG', 'LAT', 'MEI', 'ATA'],
+            },
+          },
+          {
+            name: 'condition',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: ['APTO', 'MAL_CONDICIONADO', 'DOENTE'],
+            },
+          },
+          {
+            name: 'free',
+            in: 'query',
+            schema: { type: 'string', enum: ['true', 'false'] },
+          },
+          {
+            name: 'club_id',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1 },
+          },
+          {
+            name: 'min_age',
+            in: 'query',
+            schema: { type: 'integer', minimum: 16, maximum: 45 },
+          },
+          {
+            name: 'max_age',
+            in: 'query',
+            schema: { type: 'integer', minimum: 16, maximum: 45 },
+          },
+          {
+            name: 'min_value',
+            in: 'query',
+            schema: { type: 'number', minimum: 0, maximum: 550 },
+          },
+          {
+            name: 'max_value',
+            in: 'query',
+            schema: { type: 'number', minimum: 0, maximum: 550 },
+          },
+          {
+            name: 'sort',
+            in: 'query',
+            description:
+              'Até dois critérios distintos, separados por vírgula; empate por nome e id.',
+            schema: {
+              type: 'string',
+              default: 'name',
+              example: 'value_desc,age_asc',
+            },
+          },
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 50, default: 10 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Jogadores filtrados na página solicitada',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['data', 'meta'],
+                  properties: {
+                    data: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        required: [
+                          'id',
+                          'name',
+                          'position',
+                          'agility',
+                          'age',
+                          'condition',
+                          'base_value',
+                          'market_value',
+                          'pace',
+                          'shooting',
+                          'passing',
+                          'dribbling',
+                          'defending',
+                          'physical',
+                          'potential',
+                          'overall',
+                          'club_id',
+                        ],
+                        properties: {
+                          id: { type: 'integer' },
+                          name: { type: 'string' },
+                          position: { type: 'string' },
+                          agility: { type: 'integer' },
+                          age: { type: 'integer' },
+                          condition: { type: 'string' },
+                          base_value: { type: 'number' },
+                          market_value: { type: 'number' },
+                          pace: { type: 'integer' },
+                          shooting: { type: 'integer' },
+                          passing: { type: 'integer' },
+                          dribbling: { type: 'integer' },
+                          defending: { type: 'integer' },
+                          physical: { type: 'integer' },
+                          potential: { type: 'integer' },
+                          overall: { type: 'integer' },
+                          club_id: { type: ['integer', 'null'] },
+                        },
+                      },
+                    },
+                    meta: {
+                      type: 'object',
+                      required: ['page', 'limit', 'total_items', 'total_pages'],
+                      properties: {
+                        page: { type: 'integer' },
+                        limit: { type: 'integer' },
+                        total_items: { type: 'integer' },
+                        total_pages: { type: 'integer' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Parâmetro inválido ou contraditório' },
+          '404': { description: 'Clube do filtro inexistente' },
+        },
+      },
       post: {
         summary: 'Cadastra um jogador livre e APTO',
         requestBody: {

@@ -26,3 +26,109 @@ export const updatePlayerSchema = z.object({
 });
 
 export type UpdatePlayerInput = z.infer<typeof updatePlayerSchema>;
+
+const canonicalPositiveInteger = z
+  .string()
+  .regex(/^[1-9][0-9]*$/)
+  .refine((value) => Number(value) <= 2_147_483_647);
+
+const ageFilter = canonicalPositiveInteger.refine(
+  (value) => Number(value) >= 16 && Number(value) <= 45,
+);
+
+const monetaryFilter = z
+  .string()
+  .regex(/^(0|[1-9][0-9]*)(\.[0-9]{1,2})?$/)
+  .refine((value) => Number(value) <= 550);
+
+const sortFields = [
+  'name',
+  'value_asc',
+  'value_desc',
+  'age_asc',
+  'age_desc',
+  'position',
+] as const;
+
+export type PlayerSort = (typeof sortFields)[number];
+
+function sortField(value: string): string {
+  if (value.startsWith('value_')) return 'value';
+  if (value.startsWith('age_')) return 'age';
+  return value;
+}
+
+export function normalizePlayerSearch(value: string): string {
+  return value.replace(/^ +| +$/g, '').replace(/ {2,}/g, ' ');
+}
+
+export const listPlayersQuerySchema = z
+  .object({
+    search: z
+      .string()
+      .refine((value) => {
+        const normalized = normalizePlayerSearch(value);
+        return (
+          !/\p{Cc}/u.test(value) &&
+          [...normalized].length >= 2 &&
+          [...normalized].length <= 100
+        );
+      })
+      .optional(),
+    position: z.enum(['GOL', 'ZAG', 'LAT', 'MEI', 'ATA']).optional(),
+    condition: z.enum(['APTO', 'MAL_CONDICIONADO', 'DOENTE']).optional(),
+    free: z.enum(['true', 'false']).optional(),
+    club_id: canonicalPositiveInteger.optional(),
+    min_age: ageFilter.optional(),
+    max_age: ageFilter.optional(),
+    min_value: monetaryFilter.optional(),
+    max_value: monetaryFilter.optional(),
+    sort: z
+      .string()
+      .refine((value) => {
+        const parts = value.split(',');
+        return (
+          parts.length <= 2 &&
+          parts.every((part) => sortFields.includes(part as PlayerSort)) &&
+          new Set(parts.map(sortField)).size === parts.length
+        );
+      })
+      .optional(),
+    page: canonicalPositiveInteger.optional(),
+    limit: canonicalPositiveInteger
+      .refine((value) => Number(value) <= 50)
+      .optional(),
+  })
+  .superRefine((query, context) => {
+    if (
+      query.min_age !== undefined &&
+      query.max_age !== undefined &&
+      Number(query.min_age) > Number(query.max_age)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['min_age'],
+        message: 'Faixa de idade inválida.',
+      });
+    }
+    if (
+      query.min_value !== undefined &&
+      query.max_value !== undefined &&
+      Number(query.min_value) > Number(query.max_value)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['min_value'],
+        message: 'Faixa de valor inválida.',
+      });
+    }
+    if (query.free === 'true' && query.club_id !== undefined) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['free'],
+        message: 'Jogadores livres não podem ser filtrados por clube.',
+      });
+    }
+  });
+
+export type ListPlayersQuery = z.infer<typeof listPlayersQuerySchema>;

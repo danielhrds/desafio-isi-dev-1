@@ -1,12 +1,17 @@
 import { AppError } from '../errors/app.error.js';
 import { sequelize } from '../database/sequelize.js';
-import type { PlayerProfileUpdate } from '../repositories/player.repository.js';
+import type {
+  PlayerListFilters,
+  PlayerProfileUpdate,
+} from '../repositories/player.repository.js';
 import type { PlayerRecord } from '../repositories/player.repository.js';
 import { playerRepository } from '../repositories/player.repository.js';
 import type {
   CreatePlayerInput,
+  ListPlayersQuery,
   UpdatePlayerInput,
 } from '../schemas/player.schema.js';
+import { normalizePlayerSearch } from '../schemas/player.schema.js';
 import {
   calculateBaseValue,
   calculateMarketValue,
@@ -83,7 +88,7 @@ function searchName(name: string): string {
     .replace(/\p{Mn}/gu, '');
 }
 
-function playerResponse(player: PlayerRecord) {
+function playerResponse(player: PlayerRecord, marketValue?: string) {
   return {
     id: player.id,
     name: player.name,
@@ -93,12 +98,13 @@ function playerResponse(player: PlayerRecord) {
     condition: player.condition,
     base_value: Number(player.baseValue),
     market_value: Number(
-      calculateMarketValue(
-        player.baseValue,
-        player.condition,
-        player.agility,
-        player.age,
-      ),
+      marketValue ??
+        calculateMarketValue(
+          player.baseValue,
+          player.condition,
+          player.agility,
+          player.age,
+        ),
     ),
     pace: player.pace,
     shooting: player.shooting,
@@ -113,6 +119,42 @@ function playerResponse(player: PlayerRecord) {
 }
 
 export const playerService = {
+  async listPlayers(query: ListPlayersQuery) {
+    const clubId = query.club_id ? Number(query.club_id) : undefined;
+    if (clubId !== undefined && !(await playerRepository.clubExists(clubId))) {
+      throw new AppError(404, 'Clube não encontrado.');
+    }
+
+    const filters: PlayerListFilters = {
+      search: query.search
+        ? searchName(normalizePlayerSearch(query.search))
+        : undefined,
+      position: query.position,
+      condition: query.condition,
+      free: query.free === undefined ? undefined : query.free === 'true',
+      clubId,
+      minAge: query.min_age ? Number(query.min_age) : undefined,
+      maxAge: query.max_age ? Number(query.max_age) : undefined,
+      minValue: query.min_value,
+      maxValue: query.max_value,
+      sort: query.sort ?? 'name',
+      page: query.page ? Number(query.page) : 1,
+      limit: query.limit ? Number(query.limit) : 10,
+    };
+    const { players, totalItems } = await playerRepository.list(filters);
+    return {
+      data: players.map(({ record, marketValue }) =>
+        playerResponse(record, marketValue),
+      ),
+      meta: {
+        page: filters.page,
+        limit: filters.limit,
+        total_items: totalItems,
+        total_pages: Math.ceil(totalItems / filters.limit),
+      },
+    };
+  },
+
   async createPlayer(input: CreatePlayerInput) {
     const name = normalizeAndValidatePlayerName(input.name);
     validatePlayerCreationRules(input);
