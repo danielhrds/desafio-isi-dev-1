@@ -1,5 +1,4 @@
-import { QueryTypes, type Transaction } from 'sequelize';
-import { sequelize } from '../database/sequelize.js';
+import { literal, type Transaction } from 'sequelize';
 import { Club, type ClubFormation } from '../models/club.model.js';
 
 export interface ClubCreate {
@@ -19,17 +18,6 @@ export interface ClubRecord extends ClubCreate {
 interface RepositoryOptions {
   transaction?: Transaction;
   forUpdate?: boolean;
-}
-
-interface ClubRow {
-  id: number;
-  nome: string;
-  nome_normalizado: string;
-  nome_busca: string;
-  sigla: string;
-  caixa: string;
-  formacao: ClubFormation | null;
-  criado_em: Date;
 }
 
 function toRecord(club: Club): ClubRecord {
@@ -69,22 +57,18 @@ export const clubRepository = {
     return Club.count({ transaction: options.transaction });
   },
 
+  async exists(id: number): Promise<boolean> {
+    return (await Club.findByPk(id, { attributes: ['id'] })) !== null;
+  },
+
   async listByName(options: RepositoryOptions = {}): Promise<ClubRecord[]> {
-    const rows = await sequelize.query<ClubRow>(
-      `SELECT id, nome, nome_normalizado, nome_busca, sigla, caixa, formacao, criado_em
-       FROM clubes
-       ORDER BY nome_busca COLLATE "ucs_basic" ASC, id ASC`,
-      { type: QueryTypes.SELECT, transaction: options.transaction },
-    );
-    return rows.map((row) => ({
-      id: row.id,
-      name: row.nome,
-      normalizedName: row.nome_normalizado,
-      searchName: row.nome_busca,
-      acronym: row.sigla,
-      cash: row.caixa,
-      formation: row.formacao,
-      createdAt: row.criado_em,
-    }));
+    const clubs = await Club.findAll({
+      order: [
+        [literal('"nome_busca" COLLATE "ucs_basic"'), 'ASC'],
+        ['id', 'ASC'],
+      ],
+      transaction: options.transaction,
+    });
+    return clubs.map(toRecord);
   },
 };

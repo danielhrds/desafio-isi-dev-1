@@ -1,5 +1,6 @@
 import { AppError } from '../errors/app.error.js';
 import { sequelize } from '../database/sequelize.js';
+import { clubRepository } from '../repositories/club.repository.js';
 import type {
   PlayerListFilters,
   PlayerProfileUpdate,
@@ -129,7 +130,7 @@ export const playerService = {
 
   async listPlayers(query: ListPlayersQuery) {
     const clubId = query.club_id ? Number(query.club_id) : undefined;
-    if (clubId !== undefined && !(await playerRepository.clubExists(clubId))) {
+    if (clubId !== undefined && !(await clubRepository.exists(clubId))) {
       throw new AppError(404, 'Clube não encontrado.');
     }
 

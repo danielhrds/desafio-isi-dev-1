@@ -409,6 +409,52 @@ export const openApiDocument = {
       },
     },
     '/clubs': {
+      get: {
+        summary: 'Lista clubes com valor do elenco e patrimônio atuais',
+        parameters: [
+          {
+            name: 'sort',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: ['name', 'net_worth_asc', 'net_worth_desc'],
+              default: 'name',
+            },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Array de clubes ordenado, sem o elenco',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    required: [
+                      'id',
+                      'name',
+                      'acronym',
+                      'cash',
+                      'squad_value',
+                      'net_worth',
+                    ],
+                    properties: {
+                      id: { type: 'integer' },
+                      name: { type: 'string' },
+                      acronym: { type: 'string' },
+                      cash: { type: 'number' },
+                      squad_value: { type: 'number' },
+                      net_worth: { type: 'number' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Ordenação inválida' },
+        },
+      },
       post: {
         summary: 'Cadastra um clube',
         requestBody: {

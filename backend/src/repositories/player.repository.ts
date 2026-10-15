@@ -1,4 +1,4 @@
-import { QueryTypes, type Transaction } from 'sequelize';
+import { Op, QueryTypes, type Transaction } from 'sequelize';
 import { sequelize } from '../database/sequelize.js';
 import {
   Player,
@@ -56,6 +56,14 @@ export interface PlayerListFilters {
 export interface PlayerListResult {
   players: { record: PlayerRecord; marketValue: string }[];
   totalItems: number;
+}
+
+export interface ClubPlayerValue {
+  clubId: number;
+  baseValue: string;
+  condition: PlayerCondition;
+  agility: number;
+  age: number;
 }
 
 interface PlayerListRow {
@@ -130,12 +138,22 @@ function toRecord(player: Player): PlayerRecord {
 }
 
 export const playerRepository = {
-  async clubExists(id: number): Promise<boolean> {
-    const rows = await sequelize.query<{ exists: boolean }>(
-      'SELECT EXISTS (SELECT 1 FROM clubes WHERE id = :id) AS exists',
-      { type: QueryTypes.SELECT, replacements: { id } },
-    );
-    return rows[0].exists;
+  async listActiveClubValues(
+    options: RepositoryOptions = {},
+  ): Promise<ClubPlayerValue[]> {
+    const players = await Player.findAll({
+      attributes: ['clubId', 'baseValue', 'condition', 'agility', 'age'],
+      where: { clubId: { [Op.ne]: null } },
+      transaction: options.transaction,
+      raw: true,
+    });
+    return players.map((player) => ({
+      clubId: player.clubId!,
+      baseValue: player.baseValue,
+      condition: player.condition,
+      agility: player.agility,
+      age: player.age,
+    }));
   },
 
   async list(filters: PlayerListFilters): Promise<PlayerListResult> {

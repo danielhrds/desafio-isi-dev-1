@@ -1,8 +1,14 @@
-import { QueryTypes, UniqueConstraintError } from 'sequelize';
+import { Decimal } from 'decimal.js';
+import { QueryTypes, Transaction, UniqueConstraintError } from 'sequelize';
 import { sequelize } from '../database/sequelize.js';
 import { AppError } from '../errors/app.error.js';
 import { clubRepository } from '../repositories/club.repository.js';
-import type { CreateClubInput } from '../schemas/club.schema.js';
+import { playerRepository } from '../repositories/player.repository.js';
+import type {
+  CreateClubInput,
+  ListClubsQuery,
+} from '../schemas/club.schema.js';
+import { calculateMarketValue } from './player-calculations.js';
 
 function normalizeClubName(rawName: string): string {
   if (/\p{Cc}/u.test(rawName)) {
@@ -56,6 +62,55 @@ function validateAcronym(acronym: string, name: string): void {
 }
 
 export const clubService = {
+  async listClubs(sort: ListClubsQuery['sort'] = 'name') {
+    const { clubs, players } = await sequelize.transaction(
+      { isolationLevel: Transaction.ISOLATION_LEVELS.REPEATABLE_READ },
+      async (transaction) => ({
+        clubs: await clubRepository.listByName({ transaction }),
+        players: await playerRepository.listActiveClubValues({ transaction }),
+      }),
+    );
+
+    const squadValues = new Map<number, Decimal>();
+    for (const player of players) {
+      const marketValue = calculateMarketValue(
+        player.baseValue,
+        player.condition,
+        player.agility,
+        player.age,
+      );
+      squadValues.set(
+        player.clubId,
+        (squadValues.get(player.clubId) ?? new Decimal(0)).plus(marketValue),
+      );
+    }
+
+    const results = clubs.map((club) => {
+      const squadValue = squadValues.get(club.id) ?? new Decimal(0);
+      const netWorth = new Decimal(club.cash).plus(squadValue);
+      return {
+        response: {
+          id: club.id,
+          name: club.name,
+          acronym: club.acronym,
+          cash: Number(club.cash),
+          squad_value: squadValue.toNumber(),
+          net_worth: netWorth.toNumber(),
+        },
+        netWorth,
+      };
+    });
+
+    if (sort !== 'name') {
+      results.sort((left, right) => {
+        const comparison = left.netWorth.comparedTo(right.netWorth);
+        return sort === 'net_worth_asc' ? comparison : -comparison;
+      });
+    }
+
+    return results.map(({ response }) => response);
+  },
+
   async createClub(input: CreateClubInput) {
     const name = normalizeClubName(input.name);
     validateAcronym(input.acronym, name);
