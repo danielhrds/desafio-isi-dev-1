@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
+import { clubRoutes } from './routes/club.routes.js';
 import { openApiDocument } from './docs/openapi.js';
 import { errorMiddleware } from './middleware/error.middleware.js';
 import { playerRoutes } from './routes/player.routes.js';
@@ -22,6 +23,7 @@ app.get('/api/v1/health', (_request, response) => {
 });
 
 app.use('/api/v1/players', playerRoutes);
+app.use('/api/v1/clubs', clubRoutes);
 app.use((_request, response) => {
   response.status(404).json({ message: 'Rota não encontrada.' });
 });

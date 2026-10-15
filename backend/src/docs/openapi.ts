@@ -408,6 +408,63 @@ export const openApiDocument = {
         },
       },
     },
+    '/clubs': {
+      post: {
+        summary: 'Cadastra um clube',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'acronym'],
+                properties: {
+                  name: { type: 'string', minLength: 3, maxLength: 60 },
+                  acronym: { type: 'string', pattern: '^[A-Z]{3}$' },
+                },
+              },
+              example: { name: 'Águias FC', acronym: 'AGU' },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Clube criado',
+            headers: {
+              Location: {
+                description: 'Caminho do clube criado',
+                schema: { type: 'string' },
+              },
+            },
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: [
+                    'id',
+                    'name',
+                    'acronym',
+                    'cash',
+                    'squad_value',
+                    'net_worth',
+                  ],
+                  properties: {
+                    id: { type: 'integer' },
+                    name: { type: 'string' },
+                    acronym: { type: 'string' },
+                    cash: { type: 'number', example: 300 },
+                    squad_value: { type: 'number', example: 0 },
+                    net_worth: { type: 'number', example: 300 },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Nome ou sigla inválidos' },
+          '409': { description: 'Nome ou sigla duplicados ou liga cheia' },
+        },
+      },
+    },
     '/health': {
       get: {
         summary: 'Verifica se a API está disponível',
