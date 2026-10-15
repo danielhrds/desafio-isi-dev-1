@@ -376,6 +376,14 @@ describe('GET /api/v1/players — RN07, B07 e B17', () => {
     expect(
       free.body.data.map((player: { name: string }) => player.name),
     ).toEqual(['João Livre']);
+    const assigned = await request(app).get('/api/v1/players?free=false');
+    expect(
+      assigned.body.data.map((player: { name: string }) => player.name),
+    ).toEqual(['João Outro', 'João Silva']);
+    const byClub = await request(app).get(`/api/v1/players?club_id=${clubId}`);
+    expect(
+      byClub.body.data.map((player: { name: string }) => player.name),
+    ).toEqual(['João Outro', 'João Silva']);
     const empty = await request(app).get(
       `/api/v1/players?club_id=${emptyClubId}`,
     );
