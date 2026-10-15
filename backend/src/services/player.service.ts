@@ -216,4 +216,23 @@ export const playerService = {
       return playerResponse({ ...current, ...profile });
     });
   },
+
+  async deletePlayer(id: number): Promise<void> {
+    await sequelize.transaction(async (transaction) => {
+      const player = await playerRepository.findActiveById(id, {
+        transaction,
+        forUpdate: true,
+      });
+      if (!player) {
+        throw new AppError(404, 'Jogador não encontrado.');
+      }
+      if (player.clubId !== null) {
+        throw new AppError(409, 'Jogador com clube não pode ser excluído.');
+      }
+      const deleted = await playerRepository.softDelete(id, { transaction });
+      if (!deleted) {
+        throw new Error('A exclusão de jogador bloqueado não foi gravada.');
+      }
+    });
+  },
 };

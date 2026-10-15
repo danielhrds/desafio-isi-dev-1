@@ -40,3 +40,11 @@ export const updatePlayer: RequestHandler = asyncHandler(
     response.status(200).json(player);
   },
 );
+
+export const deletePlayer: RequestHandler = asyncHandler(
+  async (request, response) => {
+    const id = parseResourceId(request.params.id);
+    await playerService.deletePlayer(id);
+    response.status(204).end();
+  },
+);

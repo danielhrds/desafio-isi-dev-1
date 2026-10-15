@@ -389,6 +389,24 @@ export const openApiDocument = {
           },
         },
       },
+      delete: {
+        summary: 'Exclui logicamente um jogador livre',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer', minimum: 1, maximum: 2147483647 },
+          },
+        ],
+        responses: {
+          '204': { description: 'Jogador excluído, sem corpo' },
+          '404': {
+            description: 'Jogador inexistente, excluído ou id inválido',
+          },
+          '409': { description: 'Jogador pertence a um clube' },
+        },
+      },
     },
     '/health': {
       get: {
