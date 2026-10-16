@@ -609,6 +609,100 @@ export const openApiDocument = {
         },
       },
     },
+    '/clubs/{id}/transactions': {
+      get: {
+        summary: 'Consulta o histórico e os totais filtrados de um clube',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer', minimum: 1, maximum: 2147483647 },
+          },
+          {
+            name: 'type',
+            in: 'query',
+            description:
+              'Um ou dois tipos, separados por vírgula e sem repetição.',
+            schema: {
+              type: 'string',
+              enum: ['COMPRA', 'VENDA', 'COMPRA,VENDA', 'VENDA,COMPRA'],
+            },
+          },
+          {
+            name: 'player_id',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 2147483647 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Transações filtradas e resumo dos mesmos registros',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['data', 'summary'],
+                  properties: {
+                    data: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        required: [
+                          'id',
+                          'club_id',
+                          'player_id',
+                          'player_name',
+                          'type',
+                          'value',
+                          'fee',
+                          'penalty',
+                          'profit',
+                          'cash_change',
+                          'created_at',
+                        ],
+                        properties: {
+                          id: { type: 'integer' },
+                          club_id: { type: 'integer' },
+                          player_id: { type: 'integer' },
+                          player_name: { type: 'string' },
+                          type: { type: 'string', enum: ['COMPRA', 'VENDA'] },
+                          value: { type: 'number' },
+                          fee: { type: 'number' },
+                          penalty: { type: 'number' },
+                          profit: { type: ['number', 'null'] },
+                          cash_change: { type: 'number' },
+                          created_at: { type: 'string' },
+                        },
+                      },
+                    },
+                    summary: {
+                      type: 'object',
+                      required: [
+                        'total_spent',
+                        'total_received',
+                        'total_fees',
+                        'total_penalties',
+                        'total_profit',
+                      ],
+                      properties: {
+                        total_spent: { type: 'number' },
+                        total_received: { type: 'number' },
+                        total_fees: { type: 'number' },
+                        total_penalties: { type: 'number' },
+                        total_profit: { type: 'number' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Filtro inválido' },
+          '404': { description: 'Clube ou jogador inexistente ou excluído' },
+        },
+      },
+    },
     '/health': {
       get: {
         summary: 'Verifica se a API está disponível',
