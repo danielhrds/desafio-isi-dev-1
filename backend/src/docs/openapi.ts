@@ -609,6 +609,121 @@ export const openApiDocument = {
         },
       },
     },
+    '/clubs/{id}': {
+      get: {
+        summary: 'Consulta o clube, elenco atual e contratos ativos',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer', minimum: 1, maximum: 2147483647 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Clube com valores calculados e elenco ordenado',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: [
+                    'id',
+                    'name',
+                    'acronym',
+                    'cash',
+                    'squad_value',
+                    'net_worth',
+                    'players',
+                  ],
+                  properties: {
+                    id: { type: 'integer' },
+                    name: { type: 'string' },
+                    acronym: { type: 'string' },
+                    cash: { type: 'number' },
+                    squad_value: { type: 'number' },
+                    net_worth: { type: 'number' },
+                    players: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        required: [
+                          'id',
+                          'name',
+                          'position',
+                          'agility',
+                          'age',
+                          'condition',
+                          'base_value',
+                          'market_value',
+                          'pace',
+                          'shooting',
+                          'passing',
+                          'dribbling',
+                          'defending',
+                          'physical',
+                          'potential',
+                          'overall',
+                          'club_id',
+                          'contract',
+                        ],
+                        properties: {
+                          id: { type: 'integer' },
+                          name: { type: 'string' },
+                          position: {
+                            type: 'string',
+                            enum: ['GOL', 'ZAG', 'LAT', 'MEI', 'ATA'],
+                          },
+                          agility: { type: 'integer' },
+                          age: { type: 'integer' },
+                          condition: {
+                            type: 'string',
+                            enum: ['APTO', 'MAL_CONDICIONADO', 'DOENTE'],
+                          },
+                          base_value: { type: 'number' },
+                          market_value: { type: 'number' },
+                          pace: { type: 'integer' },
+                          shooting: { type: 'integer' },
+                          passing: { type: 'integer' },
+                          dribbling: { type: 'integer' },
+                          defending: { type: 'integer' },
+                          physical: { type: 'integer' },
+                          potential: { type: 'integer' },
+                          overall: { type: 'integer' },
+                          club_id: { type: 'integer' },
+                          contract: {
+                            type: 'object',
+                            required: [
+                              'purchase_value',
+                              'loyalty_until',
+                              'remaining_days',
+                              'penalty_rate',
+                            ],
+                            properties: {
+                              purchase_value: { type: 'number' },
+                              loyalty_until: {
+                                type: 'string',
+                                example: '2027-03-02T10:15:00-03:00',
+                              },
+                              remaining_days: { type: 'integer', minimum: 0 },
+                              penalty_rate: {
+                                type: 'integer',
+                                enum: [0, 5, 10, 20],
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '404': { description: 'Clube inexistente ou id inválido' },
+        },
+      },
+    },
     '/clubs/{id}/transactions': {
       get: {
         summary: 'Consulta o histórico e os totais filtrados de um clube',

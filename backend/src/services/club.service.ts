@@ -3,12 +3,16 @@ import { QueryTypes, Transaction, UniqueConstraintError } from 'sequelize';
 import { sequelize } from '../database/sequelize.js';
 import { AppError } from '../errors/app.error.js';
 import { clubRepository } from '../repositories/club.repository.js';
+import { contractRepository } from '../repositories/contract.repository.js';
 import { playerRepository } from '../repositories/player.repository.js';
 import type {
   CreateClubInput,
   ListClubsQuery,
 } from '../schemas/club.schema.js';
+import { formatBrasiliaDateTime } from '../validation/brasilia-datetime.js';
+import { calculateRemainingDaysAndPenaltyRate } from './market-calculations.js';
 import { calculateMarketValue } from './player-calculations.js';
+import { playerResponse } from './player-response.js';
 
 function normalizeClubName(rawName: string): string {
   if (/\p{Cc}/u.test(rawName)) {
@@ -62,6 +66,68 @@ function validateAcronym(acronym: string, name: string): void {
 }
 
 export const clubService = {
+  async getClubById(id: number) {
+    const { club, players, contracts } = await sequelize.transaction(
+      { isolationLevel: Transaction.ISOLATION_LEVELS.REPEATABLE_READ },
+      async (transaction) => {
+        const club = await clubRepository.findById(id, { transaction });
+        if (!club) throw new AppError(404, 'Clube não encontrado.');
+        return {
+          club,
+          players: await playerRepository.listActiveByClubId(id, {
+            transaction,
+          }),
+          contracts: await contractRepository.listActiveByClubId(id, {
+            transaction,
+          }),
+        };
+      },
+    );
+
+    const now = new Date();
+    const activeContracts = new Map(
+      contracts.map((contract) => [contract.playerId, contract]),
+    );
+    let squadValue = new Decimal(0);
+    const roster = players.map((player) => {
+      const contract = activeContracts.get(player.id);
+      if (!contract) {
+        throw new Error(
+          `Jogador ${player.id} sem contrato ativo no clube ${id}.`,
+        );
+      }
+
+      const marketValue = calculateMarketValue(
+        player.baseValue,
+        player.condition,
+        player.agility,
+        player.age,
+      );
+      squadValue = squadValue.plus(marketValue);
+      const { remainingDays, penaltyRate } =
+        calculateRemainingDaysAndPenaltyRate(contract.loyaltyUntil, now);
+      return {
+        ...playerResponse(player, marketValue),
+        contract: {
+          purchase_value: Number(contract.purchaseValue),
+          loyalty_until: formatBrasiliaDateTime(contract.loyaltyUntil),
+          remaining_days: remainingDays,
+          penalty_rate: penaltyRate,
+        },
+      };
+    });
+
+    return {
+      id: club.id,
+      name: club.name,
+      acronym: club.acronym,
+      cash: Number(club.cash),
+      squad_value: squadValue.toNumber(),
+      net_worth: new Decimal(club.cash).plus(squadValue).toNumber(),
+      players: roster,
+    };
+  },
+
   async listClubs(sort: ListClubsQuery['sort'] = 'name') {
     const { clubs, players } = await sequelize.transaction(
       { isolationLevel: Transaction.ISOLATION_LEVELS.REPEATABLE_READ },

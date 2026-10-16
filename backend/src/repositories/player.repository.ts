@@ -1,4 +1,4 @@
-import { Op, QueryTypes, type Transaction } from 'sequelize';
+import { literal, Op, QueryTypes, type Transaction } from 'sequelize';
 import { sequelize } from '../database/sequelize.js';
 import {
   Player,
@@ -138,6 +138,27 @@ function toRecord(player: Player): PlayerRecord {
 }
 
 export const playerRepository = {
+  async listActiveByClubId(
+    clubId: number,
+    options: RepositoryOptions = {},
+  ): Promise<PlayerRecord[]> {
+    const players = await Player.findAll({
+      where: { clubId },
+      order: [
+        [
+          literal(
+            `CASE "posicao" WHEN 'GOL' THEN 1 WHEN 'ZAG' THEN 2 WHEN 'LAT' THEN 3 WHEN 'MEI' THEN 4 WHEN 'ATA' THEN 5 END`,
+          ),
+          'ASC',
+        ],
+        [literal('"nome_busca" COLLATE "ucs_basic"'), 'ASC'],
+        ['id', 'ASC'],
+      ],
+      transaction: options.transaction,
+    });
+    return players.map(toRecord);
+  },
+
   async listActiveClubValues(
     options: RepositoryOptions = {},
   ): Promise<ClubPlayerValue[]> {

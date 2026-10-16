@@ -5,7 +5,6 @@ import type {
   PlayerListFilters,
   PlayerProfileUpdate,
 } from '../repositories/player.repository.js';
-import type { PlayerRecord } from '../repositories/player.repository.js';
 import { playerRepository } from '../repositories/player.repository.js';
 import type {
   CreatePlayerInput,
@@ -15,10 +14,10 @@ import type {
 import { normalizePlayerSearch } from '../schemas/player.schema.js';
 import {
   calculateBaseValue,
-  calculateMarketValue,
   calculateOverall,
   type PlayerAttributes,
 } from './player-calculations.js';
+import { playerResponse } from './player-response.js';
 
 export function normalizeAndValidatePlayerName(rawName: string): string {
   if (/\p{Cc}/u.test(rawName)) {
@@ -87,36 +86,6 @@ function searchName(name: string): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/\p{Mn}/gu, '');
-}
-
-function playerResponse(player: PlayerRecord, marketValue?: string) {
-  return {
-    id: player.id,
-    name: player.name,
-    position: player.position,
-    agility: player.agility,
-    age: player.age,
-    condition: player.condition,
-    base_value: Number(player.baseValue),
-    market_value: Number(
-      marketValue ??
-        calculateMarketValue(
-          player.baseValue,
-          player.condition,
-          player.agility,
-          player.age,
-        ),
-    ),
-    pace: player.pace,
-    shooting: player.shooting,
-    passing: player.passing,
-    dribbling: player.dribbling,
-    defending: player.defending,
-    physical: player.physical,
-    potential: player.potential,
-    overall: calculateOverall(player.position, player),
-    club_id: player.clubId,
-  };
 }
 
 export const playerService = {

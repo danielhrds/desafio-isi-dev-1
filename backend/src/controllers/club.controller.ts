@@ -5,6 +5,15 @@ import {
   listClubsQuerySchema,
 } from '../schemas/club.schema.js';
 import { clubService } from '../services/club.service.js';
+import { parseResourceId } from '../validation/resource-id.js';
+
+export const getClubById: RequestHandler = asyncHandler(
+  async (request, response) => {
+    const clubId = parseResourceId(request.params.id);
+    const club = await clubService.getClubById(clubId);
+    response.status(200).json(club);
+  },
+);
 
 export const listClubs: RequestHandler = asyncHandler(
   async (request, response) => {
