@@ -408,6 +408,104 @@ export const openApiDocument = {
         },
       },
     },
+    '/players/{id}/buy': {
+      post: {
+        summary: 'Compra um jogador livre e cria contrato e transação',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer', minimum: 1, maximum: 2147483647 },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['club_id', 'loyalty_until'],
+                properties: {
+                  club_id: {
+                    type: 'integer',
+                    minimum: 1,
+                    maximum: 2147483647,
+                  },
+                  loyalty_until: {
+                    type: 'string',
+                    pattern: '^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}-03:00$',
+                    description:
+                      'Data/hora de Brasília futura, até 1.095 dias após a compra.',
+                    example: '2027-03-02T10:15-03:00',
+                  },
+                },
+              },
+              example: {
+                club_id: 1,
+                loyalty_until: '2027-03-02T10:15-03:00',
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Compra concluída com contrato e novo caixa',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: [
+                    'id',
+                    'club_id',
+                    'player_id',
+                    'player_name',
+                    'type',
+                    'value',
+                    'fee',
+                    'penalty',
+                    'profit',
+                    'cash_change',
+                    'created_at',
+                    'contract',
+                    'club_cash',
+                  ],
+                  properties: {
+                    id: { type: 'integer' },
+                    club_id: { type: 'integer' },
+                    player_id: { type: 'integer' },
+                    player_name: { type: 'string' },
+                    type: { type: 'string', enum: ['COMPRA'] },
+                    value: { type: 'number' },
+                    fee: { type: 'number' },
+                    penalty: { type: 'number', example: 0 },
+                    profit: { type: 'null' },
+                    cash_change: { type: 'number' },
+                    created_at: { type: 'string' },
+                    contract: {
+                      type: 'object',
+                      required: ['purchase_value', 'loyalty_until', 'status'],
+                      properties: {
+                        purchase_value: { type: 'number' },
+                        loyalty_until: { type: 'string' },
+                        status: { type: 'string', enum: ['ATIVO'] },
+                      },
+                    },
+                    club_cash: { type: 'number' },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Corpo ou fidelidade inválidos' },
+          '404': { description: 'Jogador ou clube inexistente' },
+          '409': {
+            description:
+              'Jogador ocupado, recompra, elenco cheio ou limite de caixa excedido',
+          },
+        },
+      },
+    },
     '/clubs': {
       get: {
         summary: 'Lista clubes com valor do elenco e patrimônio atuais',

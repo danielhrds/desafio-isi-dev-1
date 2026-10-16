@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { buyPlayer } from '../controllers/market.controller.js';
 import {
   createPlayer,
   deletePlayer,
@@ -12,5 +13,6 @@ export const playerRoutes = Router();
 playerRoutes.get('/', listPlayers);
 playerRoutes.get('/:id', getPlayerById);
 playerRoutes.post('/', createPlayer);
+playerRoutes.post('/:id/buy', buyPlayer);
 playerRoutes.put('/:id', updatePlayer);
 playerRoutes.delete('/:id', deletePlayer);

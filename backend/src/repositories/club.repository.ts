@@ -61,6 +61,18 @@ export const clubRepository = {
     return (await Club.findByPk(id, { attributes: ['id'] })) !== null;
   },
 
+  async updateCash(
+    id: number,
+    cash: string,
+    options: RepositoryOptions = {},
+  ): Promise<boolean> {
+    const [updatedCount] = await Club.update(
+      { cash },
+      { where: { id }, transaction: options.transaction },
+    );
+    return updatedCount === 1;
+  },
+
   async listByName(options: RepositoryOptions = {}): Promise<ClubRecord[]> {
     const clubs = await Club.findAll({
       order: [

@@ -297,6 +297,31 @@ export const playerRepository = {
     return player ? toRecord(player) : null;
   },
 
+  async countActiveByClubId(
+    clubId: number,
+    options: RepositoryOptions = {},
+  ): Promise<number> {
+    return Player.count({
+      where: { clubId },
+      transaction: options.transaction,
+    });
+  },
+
+  async assignToClub(
+    id: number,
+    clubId: number,
+    options: RepositoryOptions = {},
+  ): Promise<boolean> {
+    const [updatedCount] = await Player.update(
+      { clubId },
+      {
+        where: { id, clubId: null },
+        transaction: options.transaction,
+      },
+    );
+    return updatedCount === 1;
+  },
+
   async updateProfile(
     id: number,
     data: PlayerProfileUpdate,
