@@ -703,6 +703,57 @@ export const openApiDocument = {
         },
       },
     },
+    '/clubs/{id}/transactions/export': {
+      get: {
+        summary: 'Exporta o histórico filtrado de um clube em CSV',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer', minimum: 1, maximum: 2147483647 },
+          },
+          {
+            name: 'type',
+            in: 'query',
+            description:
+              'Um ou dois tipos, separados por vírgula e sem repetição.',
+            schema: {
+              type: 'string',
+              enum: ['COMPRA', 'VENDA', 'COMPRA,VENDA', 'VENDA,COMPRA'],
+            },
+          },
+          {
+            name: 'player_id',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 2147483647 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'CSV UTF-8 sem BOM, com linhas LF e cabeçalho literal',
+            headers: {
+              'Content-Disposition': {
+                description: 'Sugestão de nome para o arquivo baixado',
+                schema: { type: 'string' },
+              },
+            },
+            content: {
+              'text/csv': {
+                schema: { type: 'string' },
+              },
+            },
+          },
+          '400': {
+            description: 'Filtro inválido; resposta em JSON com message',
+          },
+          '404': {
+            description:
+              'Clube ou jogador inexistente; resposta em JSON com message',
+          },
+        },
+      },
+    },
     '/health': {
       get: {
         summary: 'Verifica se a API está disponível',

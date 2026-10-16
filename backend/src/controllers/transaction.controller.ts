@@ -12,3 +12,19 @@ export const listTransactions: RequestHandler = asyncHandler(
     response.status(200).json(result);
   },
 );
+
+export const exportTransactions: RequestHandler = asyncHandler(
+  async (request, response) => {
+    const clubId = parseResourceId(request.params.id);
+    const query = listTransactionsQuerySchema.parse(request.query);
+    const csv = await transactionService.exportTransactions(clubId, query);
+    response
+      .status(200)
+      .type('text/csv')
+      .set(
+        'Content-Disposition',
+        `attachment; filename="club-${clubId}-transactions.csv"`,
+      )
+      .send(csv);
+  },
+);
