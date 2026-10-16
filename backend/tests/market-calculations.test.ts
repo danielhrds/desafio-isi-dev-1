@@ -1,5 +1,6 @@
 import { AppError } from '../src/errors/app.error.js';
 import {
+  calculateRemainingDaysAndPenaltyRate,
   calculatePurchaseFee,
   validateLoyaltyPeriod,
 } from '../src/services/market-calculations.js';
@@ -19,6 +20,28 @@ describe('RN13: taxa de compra em moeda', () => {
     ['30.10', '1.51'],
   ])('%s → taxa %s', (marketValue, expected) => {
     expect(calculatePurchaseFee(marketValue)).toBe(expected);
+  });
+});
+
+describe('RN15: dias restantes e percentual de multa', () => {
+  const now = new Date('2026-11-02T13:15:00.000Z');
+  const day = 86_400_000;
+
+  it.each([
+    ['fidelidade vencida', -1, 0, 0],
+    ['fim neste instante', 0, 0, 0],
+    ['um milissegundo restante', 1, 1, 5],
+    ['dez dias e duas horas', 10 * day + 2 * 3_600_000, 11, 5],
+    ['trinta dias exatos', 30 * day, 30, 5],
+    ['trinta dias e um milissegundo', 30 * day + 1, 31, 10],
+    ['cento e oitenta dias exatos', 180 * day, 180, 10],
+    ['cento e oitenta dias e um milissegundo', 180 * day + 1, 181, 20],
+  ])('%s → %i dias e %i%%', (_label, offset, remainingDays, penaltyRate) => {
+    const loyaltyUntil = new Date(now.getTime() + offset);
+    expect(calculateRemainingDaysAndPenaltyRate(loyaltyUntil, now)).toEqual({
+      remainingDays,
+      penaltyRate,
+    });
   });
 });
 
