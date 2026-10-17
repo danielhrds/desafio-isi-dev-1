@@ -1,3 +1,51 @@
+const lineupPlayerSchema = {
+  type: 'object',
+  required: [
+    'id',
+    'name',
+    'position',
+    'agility',
+    'age',
+    'condition',
+    'base_value',
+    'market_value',
+    'pace',
+    'shooting',
+    'passing',
+    'dribbling',
+    'defending',
+    'physical',
+    'potential',
+    'overall',
+    'club_id',
+  ],
+  properties: {
+    id: { type: 'integer' },
+    name: { type: 'string' },
+    position: {
+      type: 'string',
+      enum: ['GOL', 'ZAG', 'LAT', 'MEI', 'ATA'],
+    },
+    agility: { type: 'integer' },
+    age: { type: 'integer' },
+    condition: {
+      type: 'string',
+      enum: ['APTO', 'MAL_CONDICIONADO'],
+    },
+    base_value: { type: 'number' },
+    market_value: { type: 'number' },
+    pace: { type: 'integer' },
+    shooting: { type: 'integer' },
+    passing: { type: 'integer' },
+    dribbling: { type: 'integer' },
+    defending: { type: 'integer' },
+    physical: { type: 'integer' },
+    potential: { type: 'integer' },
+    overall: { type: 'integer' },
+    club_id: { type: 'integer' },
+  },
+};
+
 export const openApiDocument = {
   openapi: '3.1.0',
   info: {
@@ -725,6 +773,45 @@ export const openApiDocument = {
       },
     },
     '/clubs/{id}/lineup': {
+      get: {
+        summary: 'Consulta a formação e os titulares atuais do clube',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer', minimum: 1, maximum: 2147483647 },
+          },
+        ],
+        responses: {
+          '200': {
+            description:
+              'Escalação atual, completa, incompleta ou ainda não criada',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['club_id', 'formation', 'complete', 'players'],
+                  properties: {
+                    club_id: { type: 'integer' },
+                    formation: {
+                      type: ['string', 'null'],
+                      enum: ['3-1', '2-2', '2-1-1', '1-2-1', null],
+                    },
+                    complete: { type: 'boolean' },
+                    players: {
+                      type: 'array',
+                      maxItems: 5,
+                      items: lineupPlayerSchema,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '404': { description: 'Clube inexistente ou id inválido' },
+        },
+      },
       put: {
         summary: 'Substitui a formação e os cinco titulares do clube',
         parameters: [
@@ -778,53 +865,7 @@ export const openApiDocument = {
                       type: 'array',
                       minItems: 5,
                       maxItems: 5,
-                      items: {
-                        type: 'object',
-                        required: [
-                          'id',
-                          'name',
-                          'position',
-                          'agility',
-                          'age',
-                          'condition',
-                          'base_value',
-                          'market_value',
-                          'pace',
-                          'shooting',
-                          'passing',
-                          'dribbling',
-                          'defending',
-                          'physical',
-                          'potential',
-                          'overall',
-                          'club_id',
-                        ],
-                        properties: {
-                          id: { type: 'integer' },
-                          name: { type: 'string' },
-                          position: {
-                            type: 'string',
-                            enum: ['GOL', 'ZAG', 'LAT', 'MEI', 'ATA'],
-                          },
-                          agility: { type: 'integer' },
-                          age: { type: 'integer' },
-                          condition: {
-                            type: 'string',
-                            enum: ['APTO', 'MAL_CONDICIONADO'],
-                          },
-                          base_value: { type: 'number' },
-                          market_value: { type: 'number' },
-                          pace: { type: 'integer' },
-                          shooting: { type: 'integer' },
-                          passing: { type: 'integer' },
-                          dribbling: { type: 'integer' },
-                          defending: { type: 'integer' },
-                          physical: { type: 'integer' },
-                          potential: { type: 'integer' },
-                          overall: { type: 'integer' },
-                          club_id: { type: 'integer' },
-                        },
-                      },
+                      items: lineupPlayerSchema,
                     },
                   },
                 },

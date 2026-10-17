@@ -4,6 +4,14 @@ import { putLineupSchema } from '../schemas/lineup.schema.js';
 import { lineupService } from '../services/lineup.service.js';
 import { parseResourceId } from '../validation/resource-id.js';
 
+export const getClubLineup: RequestHandler = asyncHandler(
+  async (request, response) => {
+    const clubId = parseResourceId(request.params.id);
+    const lineup = await lineupService.getLineup(clubId);
+    response.status(200).json(lineup);
+  },
+);
+
 export const putClubLineup: RequestHandler = asyncHandler(
   async (request, response) => {
     const clubId = parseResourceId(request.params.id);

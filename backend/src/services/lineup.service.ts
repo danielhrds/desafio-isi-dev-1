@@ -1,4 +1,4 @@
-import { UniqueConstraintError } from 'sequelize';
+import { Transaction, UniqueConstraintError } from 'sequelize';
 import { sequelize } from '../database/sequelize.js';
 import { AppError } from '../errors/app.error.js';
 import type { ClubFormation } from '../models/club.model.js';
@@ -56,6 +56,43 @@ function validatePositions(
 }
 
 export const lineupService = {
+  async getLineup(clubId: number) {
+    return sequelize.transaction(
+      { isolationLevel: Transaction.ISOLATION_LEVELS.REPEATABLE_READ },
+      async (transaction) => {
+        const club = await clubRepository.findById(clubId, { transaction });
+        if (!club) throw new AppError(404, 'Clube não encontrado.');
+
+        const lineups = await lineupRepository.listByClubId(clubId, {
+          transaction,
+        });
+        if (lineups.length === 0) {
+          return {
+            club_id: clubId,
+            formation: club.formation,
+            complete: false,
+            players: [],
+          };
+        }
+
+        const selectedIds = new Set(lineups.map((lineup) => lineup.playerId));
+        const players = (
+          await playerRepository.listActiveByClubId(clubId, { transaction })
+        ).filter((player) => selectedIds.has(player.id));
+        if (players.length !== lineups.length) {
+          throw new Error('Os titulares da escalação não estão no elenco.');
+        }
+
+        return {
+          club_id: clubId,
+          formation: club.formation,
+          complete: club.formation !== null && players.length === 5,
+          players: players.map((player) => playerResponse(player)),
+        };
+      },
+    );
+  },
+
   async setLineup(clubId: number, input: PutLineupInput) {
     try {
       return await sequelize.transaction(async (transaction) => {
