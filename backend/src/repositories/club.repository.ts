@@ -73,6 +73,18 @@ export const clubRepository = {
     return updatedCount === 1;
   },
 
+  async updateFormation(
+    id: number,
+    formation: ClubFormation,
+    transaction: Transaction,
+  ): Promise<boolean> {
+    const [updatedCount] = await Club.update(
+      { formation },
+      { where: { id }, transaction },
+    );
+    return updatedCount === 1;
+  },
+
   async listByName(options: RepositoryOptions = {}): Promise<ClubRecord[]> {
     const clubs = await Club.findAll({
       order: [

@@ -35,10 +35,10 @@ export const lineupRepository = {
   async replaceByClubId(
     clubId: number,
     playerIds: number[],
-    createdAt: Date,
     transaction: Transaction,
   ): Promise<void> {
     await Lineup.destroy({ where: { clubId }, transaction });
+    const createdAt = new Date();
     await Lineup.bulkCreate(
       playerIds.map((playerId) => ({ clubId, playerId, createdAt })),
       { transaction },

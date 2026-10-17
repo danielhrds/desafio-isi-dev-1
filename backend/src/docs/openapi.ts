@@ -724,6 +724,122 @@ export const openApiDocument = {
         },
       },
     },
+    '/clubs/{id}/lineup': {
+      put: {
+        summary: 'Substitui a formação e os cinco titulares do clube',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer', minimum: 1, maximum: 2147483647 },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['formation', 'player_ids'],
+                properties: {
+                  formation: {
+                    type: 'string',
+                    enum: ['3-1', '2-2', '2-1-1', '1-2-1'],
+                  },
+                  player_ids: {
+                    type: 'array',
+                    minItems: 5,
+                    maxItems: 5,
+                    uniqueItems: true,
+                    items: { type: 'integer', minimum: 1, maximum: 2147483647 },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Escalação completa na ordem do elenco',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['club_id', 'formation', 'complete', 'players'],
+                  properties: {
+                    club_id: { type: 'integer' },
+                    formation: {
+                      type: 'string',
+                      enum: ['3-1', '2-2', '2-1-1', '1-2-1'],
+                    },
+                    complete: { type: 'boolean', const: true },
+                    players: {
+                      type: 'array',
+                      minItems: 5,
+                      maxItems: 5,
+                      items: {
+                        type: 'object',
+                        required: [
+                          'id',
+                          'name',
+                          'position',
+                          'agility',
+                          'age',
+                          'condition',
+                          'base_value',
+                          'market_value',
+                          'pace',
+                          'shooting',
+                          'passing',
+                          'dribbling',
+                          'defending',
+                          'physical',
+                          'potential',
+                          'overall',
+                          'club_id',
+                        ],
+                        properties: {
+                          id: { type: 'integer' },
+                          name: { type: 'string' },
+                          position: {
+                            type: 'string',
+                            enum: ['GOL', 'ZAG', 'LAT', 'MEI', 'ATA'],
+                          },
+                          agility: { type: 'integer' },
+                          age: { type: 'integer' },
+                          condition: {
+                            type: 'string',
+                            enum: ['APTO', 'MAL_CONDICIONADO'],
+                          },
+                          base_value: { type: 'number' },
+                          market_value: { type: 'number' },
+                          pace: { type: 'integer' },
+                          shooting: { type: 'integer' },
+                          passing: { type: 'integer' },
+                          dribbling: { type: 'integer' },
+                          defending: { type: 'integer' },
+                          physical: { type: 'integer' },
+                          potential: { type: 'integer' },
+                          overall: { type: 'integer' },
+                          club_id: { type: 'integer' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Corpo, formação ou lista de ids inválida' },
+          '404': { description: 'Clube ou jogador inexistente' },
+          '409': {
+            description:
+              'Jogador fora do elenco, DOENTE ou posições incompatíveis',
+          },
+        },
+      },
+    },
     '/clubs/{id}/transactions': {
       get: {
         summary: 'Consulta o histórico e os totais filtrados de um clube',
