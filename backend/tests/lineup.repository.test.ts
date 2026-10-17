@@ -9,7 +9,6 @@ const execFileAsync = promisify(execFile);
 const originalDatabaseUrl = process.env.DATABASE_URL;
 const testDatabaseName = `passe_test_${randomBytes(6).toString('hex')}`;
 const firstTime = new Date('2026-11-02T13:15:00.000Z');
-const secondTime = new Date('2026-11-03T13:15:00.000Z');
 
 let adminDatabase: Sequelize;
 let database: Sequelize;
@@ -168,34 +167,49 @@ describe('B3/RN19: persistência da escalação', () => {
     const midfielderId = await createPlayer('Lauro Neves', club.id);
     await createPlayer('Otto Rangel', otherClub.id);
 
+    const firstWriteStartedAt = Date.now();
     await database.transaction(async (transaction) => {
       await lineupRepository.replaceByClubId(
         club.id,
         [midfielderId, goalkeeperId],
-        firstTime,
         transaction,
       );
-      expect(
-        await lineupRepository.listByClubId(club.id, { transaction }),
-      ).toEqual([
-        { clubId: club.id, playerId: goalkeeperId, createdAt: firstTime },
-        { clubId: club.id, playerId: midfielderId, createdAt: firstTime },
-      ]);
     });
+    const firstWriteFinishedAt = Date.now();
+    const firstRows = await lineupRepository.listByClubId(club.id);
+    expect(
+      firstRows.map(({ clubId, playerId }) => ({ clubId, playerId })),
+    ).toEqual([
+      { clubId: club.id, playerId: goalkeeperId },
+      { clubId: club.id, playerId: midfielderId },
+    ]);
+    for (const row of firstRows) {
+      expect(row.createdAt.getTime()).toBeGreaterThanOrEqual(
+        firstWriteStartedAt,
+      );
+      expect(row.createdAt.getTime()).toBeLessThanOrEqual(firstWriteFinishedAt);
+    }
 
     await database.transaction(async (transaction) => {
       await lineupRepository.replaceByClubId(
         club.id,
         [defenderId, midfielderId],
-        secondTime,
         transaction,
       );
     });
 
-    expect(await lineupRepository.listByClubId(club.id)).toEqual([
-      { clubId: club.id, playerId: defenderId, createdAt: secondTime },
-      { clubId: club.id, playerId: midfielderId, createdAt: secondTime },
+    const secondRows = await lineupRepository.listByClubId(club.id);
+    expect(
+      secondRows.map(({ clubId, playerId }) => ({ clubId, playerId })),
+    ).toEqual([
+      { clubId: club.id, playerId: defenderId },
+      { clubId: club.id, playerId: midfielderId },
     ]);
+    for (const row of secondRows) {
+      expect(row.createdAt.getTime()).toBeGreaterThanOrEqual(
+        firstWriteFinishedAt,
+      );
+    }
     expect(await lineupRepository.listByClubId(otherClub.id)).toEqual([]);
     expect(await lineupRepository.listByClubId(999)).toEqual([]);
   });
@@ -208,10 +222,10 @@ describe('B3/RN19: persistência da escalação', () => {
       await lineupRepository.replaceByClubId(
         club.id,
         [firstPlayerId, secondPlayerId],
-        firstTime,
         transaction,
       );
     });
+    const originalRows = await lineupRepository.listByClubId(club.id);
 
     await database.transaction(async (transaction) => {
       expect(
@@ -221,9 +235,9 @@ describe('B3/RN19: persistência da escalação', () => {
         await lineupRepository.removeByPlayerId(firstPlayerId, { transaction }),
       ).toBe(false);
     });
-    expect(await lineupRepository.listByClubId(club.id)).toEqual([
-      { clubId: club.id, playerId: secondPlayerId, createdAt: firstTime },
-    ]);
+    expect(await lineupRepository.listByClubId(club.id)).toEqual(
+      originalRows.filter((row) => row.playerId === secondPlayerId),
+    );
   });
 
   it('recusa FKs inválidas e o mesmo jogador em duas escalações', async () => {
@@ -236,30 +250,28 @@ describe('B3/RN19: persistência da escalação', () => {
       await lineupRepository.replaceByClubId(
         club.id,
         [firstPlayerId],
-        firstTime,
         transaction,
       );
       await lineupRepository.replaceByClubId(
         otherClub.id,
         [secondPlayerId],
-        firstTime,
         transaction,
       );
     });
+    const originalOtherRows = await lineupRepository.listByClubId(otherClub.id);
 
     await expect(
       database.transaction((transaction) =>
         lineupRepository.replaceByClubId(
           otherClub.id,
           [firstPlayerId],
-          secondTime,
           transaction,
         ),
       ),
     ).rejects.toMatchObject({ parent: { code: '23505' } });
-    expect(await lineupRepository.listByClubId(otherClub.id)).toEqual([
-      { clubId: otherClub.id, playerId: secondPlayerId, createdAt: firstTime },
-    ]);
+    expect(await lineupRepository.listByClubId(otherClub.id)).toEqual(
+      originalOtherRows,
+    );
 
     for (const [clubId, playerId] of [
       [999, unselectedPlayerId],
@@ -280,20 +292,15 @@ describe('B3/RN19: persistência da escalação', () => {
     const firstPlayerId = await createPlayer('Rui Prado', club.id);
     const secondPlayerId = await createPlayer('Téo Brandão', club.id);
     await database.transaction((transaction) =>
-      lineupRepository.replaceByClubId(
-        club.id,
-        [firstPlayerId],
-        firstTime,
-        transaction,
-      ),
+      lineupRepository.replaceByClubId(club.id, [firstPlayerId], transaction),
     );
+    const originalRows = await lineupRepository.listByClubId(club.id);
 
     await expect(
       database.transaction(async (transaction) => {
         await lineupRepository.replaceByClubId(
           club.id,
           [secondPlayerId],
-          secondTime,
           transaction,
         );
         await lineupRepository.removeByPlayerId(secondPlayerId, {
@@ -302,8 +309,6 @@ describe('B3/RN19: persistência da escalação', () => {
         throw new Error('cancelar operação');
       }),
     ).rejects.toThrow('cancelar operação');
-    expect(await lineupRepository.listByClubId(club.id)).toEqual([
-      { clubId: club.id, playerId: firstPlayerId, createdAt: firstTime },
-    ]);
+    expect(await lineupRepository.listByClubId(club.id)).toEqual(originalRows);
   });
 });
