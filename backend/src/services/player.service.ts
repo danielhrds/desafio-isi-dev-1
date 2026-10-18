@@ -1,6 +1,7 @@
 import { AppError } from '../errors/app.error.js';
 import { sequelize } from '../database/sequelize.js';
 import { clubRepository } from '../repositories/club.repository.js';
+import { lineupRepository } from '../repositories/lineup.repository.js';
 import type {
   PlayerListFilters,
   PlayerProfileUpdate,
@@ -10,6 +11,7 @@ import type {
   CreatePlayerInput,
   ListPlayersQuery,
   UpdatePlayerInput,
+  UpdatePlayerConditionInput,
 } from '../schemas/player.schema.js';
 import { normalizePlayerSearch } from '../schemas/player.schema.js';
 import {
@@ -184,6 +186,50 @@ export const playerService = {
       }
 
       return playerResponse({ ...current, ...profile });
+    });
+  },
+
+  async updatePlayerCondition(id: number, input: UpdatePlayerConditionInput) {
+    return sequelize.transaction(async (transaction) => {
+      const current = await playerRepository.findActiveById(id, {
+        transaction,
+        forUpdate: true,
+      });
+      if (!current) {
+        throw new AppError(404, 'Jogador não encontrado.');
+      }
+      if (current.condition === input.condition) {
+        return playerResponse(current);
+      }
+      if (current.condition === 'DOENTE' && input.condition === 'APTO') {
+        throw new AppError(
+          409,
+          'Jogador DOENTE não pode passar direto para APTO.',
+        );
+      }
+
+      if (current.clubId !== null) {
+        const club = await clubRepository.findById(current.clubId, {
+          transaction,
+          forUpdate: true,
+        });
+        if (!club) {
+          throw new Error('O clube do jogador bloqueado não foi encontrado.');
+        }
+      }
+
+      if (
+        !(await playerRepository.updateCondition(id, input.condition, {
+          transaction,
+        }))
+      ) {
+        throw new Error('A condição do jogador bloqueado não foi gravada.');
+      }
+      if (input.condition === 'DOENTE') {
+        await lineupRepository.removeByPlayerId(id, { transaction });
+      }
+
+      return playerResponse({ ...current, condition: input.condition });
     });
   },
 

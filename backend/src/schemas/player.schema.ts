@@ -27,6 +27,14 @@ export const updatePlayerSchema = z.object({
 
 export type UpdatePlayerInput = z.infer<typeof updatePlayerSchema>;
 
+export const updatePlayerConditionSchema = z.object({
+  condition: z.enum(['APTO', 'MAL_CONDICIONADO', 'DOENTE']),
+});
+
+export type UpdatePlayerConditionInput = z.infer<
+  typeof updatePlayerConditionSchema
+>;
+
 const canonicalPositiveInteger = z
   .string()
   .regex(/^[1-9][0-9]*$/)

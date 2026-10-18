@@ -2,6 +2,7 @@ import type { RequestHandler } from 'express';
 import {
   createPlayerSchema,
   listPlayersQuerySchema,
+  updatePlayerConditionSchema,
   updatePlayerSchema,
 } from '../schemas/player.schema.js';
 import { playerService } from '../services/player.service.js';
@@ -37,6 +38,15 @@ export const updatePlayer: RequestHandler = asyncHandler(
     const id = parseResourceId(request.params.id);
     const input = updatePlayerSchema.parse(request.body);
     const player = await playerService.updatePlayer(id, input);
+    response.status(200).json(player);
+  },
+);
+
+export const updatePlayerCondition: RequestHandler = asyncHandler(
+  async (request, response) => {
+    const id = parseResourceId(request.params.id);
+    const input = updatePlayerConditionSchema.parse(request.body);
+    const player = await playerService.updatePlayerCondition(id, input);
     response.status(200).json(player);
   },
 );

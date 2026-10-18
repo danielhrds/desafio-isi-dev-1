@@ -46,6 +46,18 @@ const lineupPlayerSchema = {
   },
 };
 
+const playerResponseSchema = {
+  ...lineupPlayerSchema,
+  properties: {
+    ...lineupPlayerSchema.properties,
+    condition: {
+      type: 'string',
+      enum: ['APTO', 'MAL_CONDICIONADO', 'DOENTE'],
+    },
+    club_id: { type: ['integer', 'null'] },
+  },
+};
+
 export const openApiDocument = {
   openapi: '3.1.0',
   info: {
@@ -453,6 +465,51 @@ export const openApiDocument = {
             description: 'Jogador inexistente, excluído ou id inválido',
           },
           '409': { description: 'Jogador pertence a um clube' },
+        },
+      },
+    },
+    '/players/{id}/condition': {
+      patch: {
+        summary: 'Altera a condição de um jogador ativo',
+        description:
+          'Ao passar para DOENTE, remove o jogador da escalação, se for titular. Enviar a condição atual não altera o jogador.',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer', minimum: 1, maximum: 2147483647 },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['condition'],
+                properties: {
+                  condition: {
+                    type: 'string',
+                    enum: ['APTO', 'MAL_CONDICIONADO', 'DOENTE'],
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Jogador atualizado no formato da consulta por id',
+            content: {
+              'application/json': { schema: playerResponseSchema },
+            },
+          },
+          '400': { description: 'Corpo ou condição inválidos' },
+          '404': {
+            description: 'Jogador inexistente, excluído ou id inválido',
+          },
+          '409': { description: 'Transição direta de DOENTE para APTO' },
         },
       },
     },
