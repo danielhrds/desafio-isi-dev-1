@@ -15,6 +15,11 @@ export interface ClubRecord extends ClubCreate {
   createdAt: Date;
 }
 
+export interface ClubNameRecord {
+  id: number;
+  name: string;
+}
+
 interface RepositoryOptions {
   transaction?: Transaction;
   forUpdate?: boolean;
@@ -94,5 +99,17 @@ export const clubRepository = {
       transaction: options.transaction,
     });
     return clubs.map(toRecord);
+  },
+
+  async listNames(options: RepositoryOptions = {}): Promise<ClubNameRecord[]> {
+    return Club.findAll({
+      attributes: ['id', 'name'],
+      order: [
+        [literal('"nome_busca" COLLATE "ucs_basic"'), 'ASC'],
+        ['id', 'ASC'],
+      ],
+      raw: true,
+      transaction: options.transaction,
+    });
   },
 };

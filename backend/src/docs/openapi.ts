@@ -153,9 +153,56 @@ export const openApiDocument = {
           },
         },
       },
+      Standing: {
+        type: 'object',
+        required: [
+          'position',
+          'club_id',
+          'club_name',
+          'played',
+          'wins',
+          'draws',
+          'losses',
+          'goals_for',
+          'goals_against',
+          'goal_difference',
+          'points',
+        ],
+        properties: {
+          position: { type: 'integer', minimum: 1 },
+          club_id: { type: 'integer' },
+          club_name: { type: 'string' },
+          played: { type: 'integer', minimum: 0 },
+          wins: { type: 'integer', minimum: 0 },
+          draws: { type: 'integer', minimum: 0 },
+          losses: { type: 'integer', minimum: 0 },
+          goals_for: { type: 'integer', minimum: 0 },
+          goals_against: { type: 'integer', minimum: 0 },
+          goal_difference: { type: 'integer' },
+          points: { type: 'integer', minimum: 0 },
+        },
+      },
     },
   },
   paths: {
+    '/standings': {
+      get: {
+        summary: 'Calcula a classificação de todos os clubes',
+        responses: {
+          '200': {
+            description: 'Classificação atual em ordem de posição',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/Standing' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     '/matches': {
       get: {
         summary: 'Lista partidas da mais recente para a mais antiga',

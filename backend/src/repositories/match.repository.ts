@@ -16,6 +16,11 @@ export interface MatchRecord {
   playedAt: Date;
 }
 
+export type MatchScoreRecord = Pick<
+  MatchRecord,
+  'homeClubId' | 'awayClubId' | 'homeGoals' | 'awayGoals'
+>;
+
 export interface MatchDuelRecord {
   id: number;
   matchId: number;
@@ -100,6 +105,16 @@ function toDuelRecord(duel: MatchDuel): MatchDuelRecord {
 }
 
 export const matchRepository = {
+  async listScores(
+    options: RepositoryOptions = {},
+  ): Promise<MatchScoreRecord[]> {
+    return Match.findAll({
+      attributes: ['homeClubId', 'awayClubId', 'homeGoals', 'awayGoals'],
+      raw: true,
+      transaction: options.transaction,
+    });
+  },
+
   async createWithDuels(
     data: MatchCreate,
     duels: MatchDuelCreate[],
