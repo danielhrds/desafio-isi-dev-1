@@ -535,8 +535,17 @@ test('RN21/B22: GET da partida devolve o mesmo formato do POST e seis duelos em 
   const created = await post(home.id, away.id);
   expect(created.status).toBe(201);
 
+  const querySpy = vi.spyOn(database, 'query');
   const response = await request(app).get(created.headers.location);
+  const selects = querySpy.mock.calls
+    .map(([sql]) => String(sql))
+    .filter((sql) => sql.trimStart().startsWith('SELECT'));
+  querySpy.mockRestore();
+
   expect(response.status).toBe(200);
+  expect(selects).toHaveLength(2);
+  expect(selects[0]).toContain('JOIN "clubes" AS "homeClub"');
+  expect(selects[0]).toContain('JOIN "clubes" AS "awayClub"');
   expect(response.headers['content-type']).toMatch(/application\/json/);
   expect(response.body).toEqual(created.body);
   expect(response.body).toMatchObject({

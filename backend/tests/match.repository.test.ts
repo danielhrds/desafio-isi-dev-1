@@ -334,7 +334,11 @@ describe('B3/RN20/RN21: persistência de partidas e duelos', () => {
       defenseValue: 42,
       goal: true,
     });
-    expect(await matchRepository.findByIdWithDuels(saved.id)).toEqual(saved);
+    expect(await matchRepository.findByIdWithDuels(saved.id)).toEqual({
+      ...saved,
+      homeClubName: actors.home.name,
+      awayClubName: actors.away.name,
+    });
     expect(await matchRepository.findByIdWithDuels(999)).toBeNull();
   });
 
@@ -379,6 +383,12 @@ describe('B3/RN20/RN21: persistência de partidas e duelos', () => {
     expect(await matchRepository.findByIdWithDuels(first.id)).toHaveProperty(
       'duels',
     );
+    expect(await matchRepository.findByIdWithDuels(second.id)).toMatchObject({
+      homeClubId: actors.away.id,
+      awayClubId: actors.home.id,
+      homeClubName: actors.away.name,
+      awayClubName: actors.home.name,
+    });
   });
 
   it('preserva nomes, condições e valores após mudanças e exclusão lógica', async () => {
@@ -399,7 +409,11 @@ describe('B3/RN20/RN21: persistência de partidas e duelos', () => {
       { replacements: { playerId: actors.homeAttacker } },
     );
     const reloaded = await matchRepository.findByIdWithDuels(saved.id);
-    expect(reloaded).toEqual(saved);
+    expect(reloaded).toEqual({
+      ...saved,
+      homeClubName: actors.home.name,
+      awayClubName: actors.away.name,
+    });
     expect(reloaded?.duels[0]).toMatchObject({
       attackerName: 'Otto Rangel',
       attackerCondition: 'MAL_CONDICIONADO',
