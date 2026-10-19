@@ -229,6 +229,88 @@ describe('PUT /api/v1/players/{id} — RN08, V1–V9', () => {
     expect(await playerRow()).toEqual(before);
   });
 
+  it.each([
+    [
+      'name ausente',
+      { ...updateBody, name: undefined },
+      'O campo name é obrigatório.',
+    ],
+    [
+      'position ausente',
+      { ...updateBody, position: undefined },
+      'O campo position é obrigatório.',
+    ],
+    [
+      'agility ausente',
+      { ...updateBody, agility: undefined },
+      'O campo agility é obrigatório.',
+    ],
+    [
+      'age ausente',
+      { ...updateBody, age: undefined },
+      'O campo age é obrigatório.',
+    ],
+    [
+      'name numérico',
+      { ...updateBody, name: 123 },
+      'O campo name deve ser um texto.',
+    ],
+    [
+      'position inválida',
+      { ...updateBody, position: 'mei' },
+      'O campo position deve ser GOL, ZAG, LAT, MEI ou ATA.',
+    ],
+    [
+      'agility textual',
+      { ...updateBody, agility: '85' },
+      'O campo agility deve ser um número inteiro.',
+    ],
+    [
+      'agility fracionária',
+      { ...updateBody, agility: 85.5 },
+      'O campo agility deve ser um número inteiro.',
+    ],
+    [
+      'agility fora da faixa',
+      { ...updateBody, agility: 101 },
+      'O campo agility deve estar entre 1 e 100.',
+    ],
+    [
+      'age textual',
+      { ...updateBody, age: '25' },
+      'O campo age deve ser um número inteiro.',
+    ],
+    [
+      'age fracionária',
+      { ...updateBody, age: 25.5 },
+      'O campo age deve ser um número inteiro.',
+    ],
+    [
+      'age fora da faixa',
+      { ...updateBody, age: 15 },
+      'O campo age deve estar entre 16 e 45.',
+    ],
+  ])(
+    'V2/V5/V6: %s informa o campo sem alterar o jogador',
+    async (_label, body, message) => {
+      const before = await playerRow();
+      const response = await request(app).put('/api/v1/players/1').send(body);
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ message });
+      expect(await playerRow()).toEqual(before);
+    },
+  );
+
+  it('V1: corpo em array informa o formato esperado sem alterar o jogador', async () => {
+    const before = await playerRow();
+    const response = await request(app).put('/api/v1/players/1').send([]);
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      message: 'O corpo do PUT deve ser um objeto JSON.',
+    });
+    expect(await playerRow()).toEqual(before);
+  });
+
   it('RN08: idade menor que a atual retorna 409 sem alteração', async () => {
     const raised = await request(app)
       .put('/api/v1/players/1')
