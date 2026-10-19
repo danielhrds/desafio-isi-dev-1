@@ -1,0 +1,46 @@
+@import 'tailwindcss';
+
+:root {
+  font-family: Geist, Inter, ui-sans-serif, system-ui, sans-serif;
+  color: #17211c;
+  background: #f7f8f7;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+.app-shell {
+  width: min(100% - 32px, 960px);
+  margin: 64px auto;
+  padding: 32px;
+  border: 1px solid #e2e8e4;
+  border-radius: 10px;
+  background: white;
+}
+
+.app-shell h1 {
+  margin: 8px 0;
+  font-size: 2rem;
+}
+
+.app-shell p {
+  color: #526158;
+}
+
+.app-shell .eyebrow {
+  color: #24734a;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
