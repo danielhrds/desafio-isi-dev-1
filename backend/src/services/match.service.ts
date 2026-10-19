@@ -36,6 +36,21 @@ function completeStarters(
 }
 
 export const matchService = {
+  async getMatchById(id: number) {
+    const match = await matchRepository.findByIdWithDuels(id);
+    if (!match) throw new AppError(404, 'Partida não encontrada.');
+
+    const [homeClub, awayClub] = await Promise.all([
+      clubRepository.findById(match.homeClubId),
+      clubRepository.findById(match.awayClubId),
+    ]);
+    if (!homeClub || !awayClub) {
+      throw new Error('Clube de partida histórica não encontrado.');
+    }
+
+    return detailedMatchResponse(match, homeClub, awayClub);
+  },
+
   async playMatch(input: CreateMatchInput) {
     return sequelize.transaction(
       { isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED },

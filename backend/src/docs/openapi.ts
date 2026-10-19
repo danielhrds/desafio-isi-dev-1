@@ -121,6 +121,29 @@ export const openApiDocument = {
           goal: { type: 'boolean' },
         },
       },
+      MatchDetail: {
+        type: 'object',
+        required: ['id', 'played_at', 'home', 'away', 'result', 'duels'],
+        properties: {
+          id: { type: 'integer' },
+          played_at: {
+            type: 'string',
+            example: '2026-11-12T15:00:00-03:00',
+          },
+          home: { $ref: '#/components/schemas/MatchClub' },
+          away: { $ref: '#/components/schemas/MatchClub' },
+          result: {
+            type: 'string',
+            enum: ['MANDANTE', 'VISITANTE', 'EMPATE'],
+          },
+          duels: {
+            type: 'array',
+            minItems: 6,
+            maxItems: 6,
+            items: { $ref: '#/components/schemas/MatchDuel' },
+          },
+        },
+      },
     },
   },
   paths: {
@@ -163,42 +186,37 @@ export const openApiDocument = {
             },
             content: {
               'application/json': {
-                schema: {
-                  type: 'object',
-                  required: [
-                    'id',
-                    'played_at',
-                    'home',
-                    'away',
-                    'result',
-                    'duels',
-                  ],
-                  properties: {
-                    id: { type: 'integer' },
-                    played_at: {
-                      type: 'string',
-                      example: '2026-11-12T15:00:00-03:00',
-                    },
-                    home: { $ref: '#/components/schemas/MatchClub' },
-                    away: { $ref: '#/components/schemas/MatchClub' },
-                    result: {
-                      type: 'string',
-                      enum: ['MANDANTE', 'VISITANTE', 'EMPATE'],
-                    },
-                    duels: {
-                      type: 'array',
-                      minItems: 6,
-                      maxItems: 6,
-                      items: { $ref: '#/components/schemas/MatchDuel' },
-                    },
-                  },
-                },
+                schema: { $ref: '#/components/schemas/MatchDetail' },
               },
             },
           },
           '400': { description: 'Corpo ou ids inválidos; JSON com message' },
           '404': { description: 'Clube inexistente; JSON com message' },
           '409': { description: 'Escalação incompleta; JSON com message' },
+        },
+      },
+    },
+    '/matches/{id}': {
+      get: {
+        summary: 'Consulta uma partida com os seis duelos gravados',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer', minimum: 1, maximum: 2147483647 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Partida histórica com os seis duelos',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MatchDetail' },
+              },
+            },
+          },
+          '404': { description: 'Partida inexistente ou id inválido' },
         },
       },
     },
