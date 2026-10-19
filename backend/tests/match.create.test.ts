@@ -747,3 +747,41 @@ test.each(['', '0', '01', '-1', '+1', '1.5', '1e2', 'abc', '2147483648'])(
     expect(await counts()).toEqual({ matches: 0, duels: 0 });
   },
 );
+
+test('RN21/B22: classificação reflete partida criada pelo POST', async () => {
+  const { home, away } = await fixture();
+  const created = await post(home.id, away.id);
+  expect(created.status).toBe(201);
+
+  const response = await request(app).get('/api/v1/standings');
+  expect(response.status).toBe(200);
+  expect(response.body).toEqual([
+    {
+      position: 1,
+      club_id: away.id,
+      club_name: away.name,
+      played: 1,
+      wins: 1,
+      draws: 0,
+      losses: 0,
+      goals_for: 2,
+      goals_against: 1,
+      goal_difference: 1,
+      points: 3,
+    },
+    {
+      position: 2,
+      club_id: home.id,
+      club_name: home.name,
+      played: 1,
+      wins: 0,
+      draws: 0,
+      losses: 1,
+      goals_for: 1,
+      goals_against: 2,
+      goal_difference: -1,
+      points: 0,
+    },
+  ]);
+  expect(await counts()).toEqual({ matches: 1, duels: 6 });
+});
