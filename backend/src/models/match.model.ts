@@ -4,9 +4,10 @@ import {
   InferAttributes,
   InferCreationAttributes,
   Model,
+  NonAttribute,
 } from 'sequelize';
 import { sequelize } from '../database/sequelize.js';
-import type { ClubFormation } from './club.model.js';
+import { Club, type ClubFormation } from './club.model.js';
 
 export class Match extends Model<
   InferAttributes<Match>,
@@ -20,6 +21,8 @@ export class Match extends Model<
   declare homeFormation: ClubFormation;
   declare awayFormation: ClubFormation;
   declare playedAt: Date;
+  declare homeClub?: NonAttribute<Club>;
+  declare awayClub?: NonAttribute<Club>;
 }
 
 Match.init(
@@ -68,3 +71,6 @@ Match.init(
     timestamps: false,
   },
 );
+
+Match.belongsTo(Club, { as: 'homeClub', foreignKey: 'homeClubId' });
+Match.belongsTo(Club, { as: 'awayClub', foreignKey: 'awayClubId' });

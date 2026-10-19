@@ -40,6 +40,11 @@ export interface MatchWithDuelsRecord extends MatchRecord {
   duels: MatchDuelRecord[];
 }
 
+export interface MatchDetailRecord extends MatchWithDuelsRecord {
+  homeClubName: string;
+  awayClubName: string;
+}
+
 interface RepositoryOptions {
   transaction?: Transaction;
 }
@@ -99,11 +104,18 @@ export const matchRepository = {
   async findByIdWithDuels(
     id: number,
     options: RepositoryOptions = {},
-  ): Promise<MatchWithDuelsRecord | null> {
+  ): Promise<MatchDetailRecord | null> {
     const match = await Match.findByPk(id, {
+      include: [
+        { association: 'homeClub', attributes: ['name'] },
+        { association: 'awayClub', attributes: ['name'] },
+      ],
       transaction: options.transaction,
     });
     if (!match) return null;
+    if (!match.homeClub || !match.awayClub) {
+      throw new Error('Clube de partida histórica não encontrado.');
+    }
 
     const duels = await MatchDuel.findAll({
       where: { matchId: id },
@@ -112,6 +124,8 @@ export const matchRepository = {
     });
     return {
       ...toMatchRecord(match),
+      homeClubName: match.homeClub.name,
+      awayClubName: match.awayClub.name,
       duels: duels.map(toDuelRecord),
     };
   },
