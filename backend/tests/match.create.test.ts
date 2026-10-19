@@ -613,3 +613,137 @@ test.each(['abc', '0', '-1', '01', '1.5', '2147483648', '999'])(
     expect(await counts()).toEqual({ matches: 0, duels: 0 });
   },
 );
+
+test('RN21/B22: lista vazia e filtro de clube existente sem partidas retornam 200 []', async () => {
+  const empty = await request(app).get('/api/v1/matches/');
+  expect(empty.status).toBe(200);
+  expect(empty.body).toEqual([]);
+
+  const unused = await club('Gama SC', 'GAM');
+  const filtered = await request(app).get(
+    `/api/v1/matches?club_id=${unused.id}`,
+  );
+  expect(filtered.status).toBe(200);
+  expect(filtered.body).toEqual([]);
+
+  const missing = await request(app).get('/api/v1/matches?club_id=999');
+  expect(missing.status).toBe(404);
+  expect(missing.body).toEqual({ message: 'Clube não encontrado.' });
+  expect(await counts()).toEqual({ matches: 0, duels: 0 });
+});
+
+test('RN21/B22: lista por data e id, filtra mandante/visitante e mantém o snapshot', async () => {
+  const { home, away } = await fixture();
+  const third = await club('Gama SC', 'GAM');
+  const thirdIds = await Promise.all(
+    (['GOL', 'ZAG', 'LAT', 'MEI', 'ATA'] as const).map((position, index) =>
+      player(`Gama ${index + 1}`, position, third.id),
+    ),
+  );
+  const lineup = await request(app)
+    .put(`/api/v1/clubs/${third.id}/lineup`)
+    .send({ formation: '2-1-1', player_ids: thirdIds });
+  expect(lineup.status).toBe(200);
+
+  const first = await post(home.id, away.id);
+  const second = await post(away.id, home.id);
+  const latest = await post(third.id, home.id);
+  expect([first.status, second.status, latest.status]).toEqual([201, 201, 201]);
+  await database.query(
+    'UPDATE partidas SET jogada_em = :playedAt WHERE id IN (:ids)',
+    {
+      replacements: {
+        playedAt: '2026-11-12T18:00:00Z',
+        ids: [first.body.id, second.body.id],
+      },
+    },
+  );
+  await database.query(
+    'UPDATE partidas SET jogada_em = :playedAt WHERE id = :id',
+    {
+      replacements: {
+        playedAt: '2026-11-13T18:00:00Z',
+        id: latest.body.id,
+      },
+    },
+  );
+  await database.query(`UPDATE clubes SET formacao = '3-1' WHERE id = :id`, {
+    replacements: { id: home.id },
+  });
+
+  const querySpy = vi.spyOn(database, 'query');
+  const response = await request(app).get('/api/v1/matches');
+  const selects = querySpy.mock.calls
+    .map(([sql]) => String(sql))
+    .filter((sql) => sql.trimStart().startsWith('SELECT'));
+  querySpy.mockRestore();
+
+  expect(response.status).toBe(200);
+  expect(response.body.map((match: { id: number }) => match.id)).toEqual([
+    latest.body.id,
+    second.body.id,
+    first.body.id,
+  ]);
+  expect(selects).toHaveLength(1);
+  expect(selects[0]).toContain('JOIN "clubes" AS "homeClub"');
+  expect(selects[0]).toContain('JOIN "clubes" AS "awayClub"');
+  expect(response.body[0]).toMatchObject({
+    played_at: '2026-11-13T15:00:00-03:00',
+    home: { club_id: third.id, club_name: third.name },
+    away: { club_id: home.id, club_name: home.name },
+  });
+  expect(response.body[2]).toEqual({
+    id: first.body.id,
+    played_at: '2026-11-12T15:00:00-03:00',
+    home: {
+      club_id: home.id,
+      club_name: home.name,
+      formation: '2-1-1',
+      goals: 1,
+    },
+    away: {
+      club_id: away.id,
+      club_name: away.name,
+      formation: '2-1-1',
+      goals: 2,
+    },
+    result: 'VISITANTE',
+  });
+  expect(response.body.every((match: object) => !('duels' in match))).toBe(
+    true,
+  );
+
+  const filtered = await request(app).get(`/api/v1/matches?club_id=${away.id}`);
+  expect(filtered.status).toBe(200);
+  expect(filtered.body.map((match: { id: number }) => match.id)).toEqual([
+    second.body.id,
+    first.body.id,
+  ]);
+  const thirdOnly = await request(app).get(
+    `/api/v1/matches?club_id=${third.id}`,
+  );
+  expect(thirdOnly.status).toBe(200);
+  expect(thirdOnly.body.map((match: { id: number }) => match.id)).toEqual([
+    latest.body.id,
+  ]);
+  const unknownParameter = await request(app).get(
+    '/api/v1/matches?sort=unknown',
+  );
+  expect(unknownParameter.status).toBe(200);
+  expect(
+    unknownParameter.body.map((match: { id: number }) => match.id),
+  ).toEqual([latest.body.id, second.body.id, first.body.id]);
+  expect(await counts()).toEqual({ matches: 3, duels: 18 });
+});
+
+test.each(['', '0', '01', '-1', '+1', '1.5', '1e2', 'abc', '2147483648'])(
+  'RN21/V8: club_id=%s inválido retorna 400 sem alterar partidas',
+  async (clubId) => {
+    const response = await request(app).get(
+      `/api/v1/matches?club_id=${encodeURIComponent(clubId)}`,
+    );
+    expect(response.status).toBe(400);
+    expect(response.body.message).toEqual(expect.any(String));
+    expect(await counts()).toEqual({ matches: 0, duels: 0 });
+  },
+);

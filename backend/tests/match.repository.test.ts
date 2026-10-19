@@ -368,11 +368,20 @@ describe('B3/RN20/RN21: persistência de partidas e duelos', () => {
       ),
     );
 
-    expect((await matchRepository.list()).map(({ id }) => id)).toEqual([
+    const listed = await matchRepository.list();
+    expect(listed.map(({ id }) => id)).toEqual([
       latest.id,
       second.id,
       first.id,
     ]);
+    expect(listed[0]).toMatchObject({
+      homeClubName: actors.away.name,
+      awayClubName: third.name,
+    });
+    expect(listed[1]).toMatchObject({
+      homeClubName: actors.away.name,
+      awayClubName: actors.home.name,
+    });
     expect(
       (await matchRepository.list(actors.home.id)).map(({ id }) => id),
     ).toEqual([second.id, first.id]);
