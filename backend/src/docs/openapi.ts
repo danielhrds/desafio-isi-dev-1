@@ -67,7 +67,141 @@ export const openApiDocument = {
       'Contratos da API serão adicionados conforme os módulos forem implementados.',
   },
   servers: [{ url: 'http://localhost:3000/api/v1' }],
+  components: {
+    schemas: {
+      MatchClub: {
+        type: 'object',
+        required: ['club_id', 'club_name', 'formation', 'goals'],
+        properties: {
+          club_id: { type: 'integer' },
+          club_name: { type: 'string' },
+          formation: { type: 'string', enum: ['3-1', '2-2', '2-1-1', '1-2-1'] },
+          goals: { type: 'integer', minimum: 0, maximum: 3 },
+        },
+      },
+      MatchDuelPlayer: {
+        type: 'object',
+        required: [
+          'player_id',
+          'player_name',
+          'position',
+          'condition',
+          'attribute',
+          'value',
+        ],
+        properties: {
+          player_id: { type: 'integer' },
+          player_name: { type: 'string' },
+          position: {
+            type: 'string',
+            enum: ['GOL', 'ZAG', 'LAT', 'MEI', 'ATA'],
+          },
+          condition: { type: 'string', enum: ['APTO', 'MAL_CONDICIONADO'] },
+          attribute: {
+            type: 'string',
+            enum: ['shooting', 'passing', 'dribbling', 'defending'],
+          },
+          value: { type: 'integer' },
+        },
+      },
+      MatchDuel: {
+        type: 'object',
+        required: [
+          'order',
+          'attacking_club_id',
+          'attacker',
+          'defender',
+          'goal',
+        ],
+        properties: {
+          order: { type: 'integer', minimum: 1, maximum: 6 },
+          attacking_club_id: { type: 'integer' },
+          attacker: { $ref: '#/components/schemas/MatchDuelPlayer' },
+          defender: { $ref: '#/components/schemas/MatchDuelPlayer' },
+          goal: { type: 'boolean' },
+        },
+      },
+    },
+  },
   paths: {
+    '/matches': {
+      post: {
+        summary: 'Joga e grava uma partida entre dois clubes',
+        description:
+          'Exige cinco titulares por clube. Calcula seis duelos em um snapshot transacional, sem alterar clubes, jogadores ou escalações.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['home_club_id', 'away_club_id'],
+                properties: {
+                  home_club_id: {
+                    type: 'integer',
+                    minimum: 1,
+                    maximum: 2147483647,
+                  },
+                  away_club_id: {
+                    type: 'integer',
+                    minimum: 1,
+                    maximum: 2147483647,
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Partida e seis duelos gravados',
+            headers: {
+              Location: {
+                schema: { type: 'string' },
+                description: '/api/v1/matches/{id}',
+              },
+            },
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: [
+                    'id',
+                    'played_at',
+                    'home',
+                    'away',
+                    'result',
+                    'duels',
+                  ],
+                  properties: {
+                    id: { type: 'integer' },
+                    played_at: {
+                      type: 'string',
+                      example: '2026-11-12T15:00:00-03:00',
+                    },
+                    home: { $ref: '#/components/schemas/MatchClub' },
+                    away: { $ref: '#/components/schemas/MatchClub' },
+                    result: {
+                      type: 'string',
+                      enum: ['MANDANTE', 'VISITANTE', 'EMPATE'],
+                    },
+                    duels: {
+                      type: 'array',
+                      minItems: 6,
+                      maxItems: 6,
+                      items: { $ref: '#/components/schemas/MatchDuel' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Corpo ou ids inválidos; JSON com message' },
+          '404': { description: 'Clube inexistente; JSON com message' },
+          '409': { description: 'Escalação incompleta; JSON com message' },
+        },
+      },
+    },
     '/players': {
       get: {
         summary: 'Lista jogadores com busca, filtros, ordenação e paginação',

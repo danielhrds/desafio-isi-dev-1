@@ -6,6 +6,7 @@ import { clubRoutes } from './routes/club.routes.js';
 import { openApiDocument } from './docs/openapi.js';
 import { errorMiddleware } from './middleware/error.middleware.js';
 import { playerRoutes } from './routes/player.routes.js';
+import { matchRoutes } from './routes/match.routes.js';
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.get('/api/v1/health', (_request, response) => {
 
 app.use('/api/v1/players', playerRoutes);
 app.use('/api/v1/clubs', clubRoutes);
+app.use('/api/v1/matches', matchRoutes);
 app.use((_request, response) => {
   response.status(404).json({ message: 'Rota não encontrada.' });
 });

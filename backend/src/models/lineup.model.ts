@@ -3,8 +3,10 @@ import {
   InferAttributes,
   InferCreationAttributes,
   Model,
+  NonAttribute,
 } from 'sequelize';
 import { sequelize } from '../database/sequelize.js';
+import { Player } from './player.model.js';
 
 export class Lineup extends Model<
   InferAttributes<Lineup>,
@@ -13,6 +15,7 @@ export class Lineup extends Model<
   declare clubId: number;
   declare playerId: number;
   declare createdAt: Date;
+  declare player?: NonAttribute<Player>;
 }
 
 Lineup.init(
@@ -43,3 +46,5 @@ Lineup.init(
     timestamps: false,
   },
 );
+
+Lineup.belongsTo(Player, { as: 'player', foreignKey: 'playerId' });
