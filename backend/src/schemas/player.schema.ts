@@ -18,12 +18,39 @@ export const createPlayerSchema = z.object({
 
 export type CreatePlayerInput = z.infer<typeof createPlayerSchema>;
 
-export const updatePlayerSchema = z.object({
-  name: z.string(),
-  position: z.enum(['GOL', 'ZAG', 'LAT', 'MEI', 'ATA']),
-  agility: z.number().int().min(1).max(100),
-  age: z.number().int().min(16).max(45),
-});
+export const updatePlayerSchema = z.object(
+  {
+    name: z.string({
+      required_error: 'O campo name é obrigatório.',
+      invalid_type_error: 'O campo name deve ser um texto.',
+    }),
+    position: z.enum(['GOL', 'ZAG', 'LAT', 'MEI', 'ATA'], {
+      errorMap: (issue) => ({
+        message:
+          issue.code === 'invalid_type' && issue.received === 'undefined'
+            ? 'O campo position é obrigatório.'
+            : 'O campo position deve ser GOL, ZAG, LAT, MEI ou ATA.',
+      }),
+    }),
+    agility: z
+      .number({
+        required_error: 'O campo agility é obrigatório.',
+        invalid_type_error: 'O campo agility deve ser um número inteiro.',
+      })
+      .int('O campo agility deve ser um número inteiro.')
+      .min(1, 'O campo agility deve estar entre 1 e 100.')
+      .max(100, 'O campo agility deve estar entre 1 e 100.'),
+    age: z
+      .number({
+        required_error: 'O campo age é obrigatório.',
+        invalid_type_error: 'O campo age deve ser um número inteiro.',
+      })
+      .int('O campo age deve ser um número inteiro.')
+      .min(16, 'O campo age deve estar entre 16 e 45.')
+      .max(45, 'O campo age deve estar entre 16 e 45.'),
+  },
+  { invalid_type_error: 'O corpo do PUT deve ser um objeto JSON.' },
+);
 
 export type UpdatePlayerInput = z.infer<typeof updatePlayerSchema>;
 
