@@ -92,11 +92,19 @@ afterAll(async () => {
   process.env.DATABASE_URL = originalDatabaseUrl;
 });
 
-async function createPlayer(name: string, clubId: number) {
+async function createPlayer(
+  name: string,
+  clubId: number,
+  position: PlayerCreate['position'] = 'MEI',
+) {
   const player = await playerRepository.create({
     ...playerData,
     name,
-    searchName: name.toLowerCase(),
+    searchName: name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/\p{Mn}/gu, ''),
+    position,
   });
   expect(await playerRepository.assignToClub(player.id, clubId)).toBe(true);
   return player.id;
@@ -311,4 +319,53 @@ describe('B3/RN19: persistência da escalação', () => {
     ).rejects.toThrow('cancelar operação');
     expect(await lineupRepository.listByClubId(club.id)).toEqual(originalRows);
   });
+});
+
+it('RN20: ordena titulares no SELECT por posição, nome Unicode e id', async () => {
+  const home = await clubRepository.create(firstClub);
+  const away = await clubRepository.create(secondClub);
+  const supplementaryId = await createPlayer('𐐀 Alves', home.id);
+  const ligatureId = await createPlayer('ﬀ Alves', home.id);
+  const goalkeeperId = await createPlayer('Rui Prado', home.id, 'GOL');
+  const accentedId = await createPlayer('Érico Alves', home.id);
+  const plainId = await createPlayer('Erico Alves', home.id);
+  const awayId = await createPlayer('Otto Rangel', away.id, 'ATA');
+  await database.transaction(async (transaction) => {
+    await lineupRepository.replaceByClubId(
+      home.id,
+      [supplementaryId, ligatureId, goalkeeperId, accentedId, plainId],
+      transaction,
+    );
+    await lineupRepository.replaceByClubId(away.id, [awayId], transaction);
+  });
+
+  const querySpy = vi.spyOn(database, 'query');
+  let rows: Awaited<ReturnType<typeof lineupRepository.listMatchStarters>>;
+  let selects: string[];
+  try {
+    rows = await database.transaction((transaction) =>
+      lineupRepository.listMatchStarters(home.id, away.id, transaction),
+    );
+    selects = querySpy.mock.calls
+      .map(([sql]) => String(sql))
+      .filter((sql) => sql.trimStart().startsWith('SELECT'));
+  } finally {
+    querySpy.mockRestore();
+  }
+
+  expect(selects).toHaveLength(1);
+  expect(selects[0]).toContain('JOIN "jogadores"');
+  expect(selects[0]).toContain('ORDER BY');
+  expect(selects[0]).toContain('CASE "player"."posicao"');
+  expect(selects[0]).toContain('"player"."nome_busca" COLLATE "ucs_basic"');
+  expect(rows.map((row) => [row.clubId, row.id, row.position])).toEqual([
+    [home.id, goalkeeperId, 'GOL'],
+    [home.id, accentedId, 'MEI'],
+    [home.id, plainId, 'MEI'],
+    [home.id, ligatureId, 'MEI'],
+    [home.id, supplementaryId, 'MEI'],
+    [away.id, awayId, 'ATA'],
+  ]);
+  expect(rows.every((row) => row.snapshotAt instanceof Date)).toBe(true);
+  expect(new Set(rows.map((row) => row.snapshotAt.getTime())).size).toBe(1);
 });
