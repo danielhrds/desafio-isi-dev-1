@@ -343,6 +343,21 @@ export const playerRepository = {
     return updatedCount === 1;
   },
 
+  async releaseFromClub(
+    id: number,
+    clubId: number,
+    options: RepositoryOptions = {},
+  ): Promise<boolean> {
+    const [updatedCount] = await Player.update(
+      { clubId: null },
+      {
+        where: { id, clubId },
+        transaction: options.transaction,
+      },
+    );
+    return updatedCount === 1;
+  },
+
   async updateProfile(
     id: number,
     data: PlayerProfileUpdate,

@@ -3,12 +3,16 @@ import { sequelize } from '../database/sequelize.js';
 import { AppError } from '../errors/app.error.js';
 import { clubRepository } from '../repositories/club.repository.js';
 import { contractRepository } from '../repositories/contract.repository.js';
+import { lineupRepository } from '../repositories/lineup.repository.js';
 import { playerRepository } from '../repositories/player.repository.js';
 import { transactionRepository } from '../repositories/transaction.repository.js';
 import type { BuyPlayerInput } from '../schemas/market.schema.js';
 import { formatBrasiliaDateTime } from '../validation/brasilia-datetime.js';
 import {
   calculatePurchaseFee,
+  calculateRemainingDaysAndPenaltyRate,
+  calculateSaleCommission,
+  calculateSalePenalty,
   validateLoyaltyPeriod,
 } from './market-calculations.js';
 import { calculateMarketValue } from './player-calculations.js';
@@ -119,6 +123,111 @@ export const marketService = {
           loyalty_until: formatBrasiliaDateTime(contract.loyaltyUntil),
           status: contract.status,
         },
+        club_cash: Number(clubCash),
+      };
+    });
+  },
+
+  async sellPlayer(playerId: number) {
+    return sequelize.transaction(async (transaction) => {
+      const player = await playerRepository.findActiveById(playerId, {
+        transaction,
+        forUpdate: true,
+      });
+      if (!player) throw new AppError(404, 'Jogador não encontrado.');
+      if (player.clubId === null) {
+        throw new AppError(409, 'Jogador está livre.');
+      }
+
+      const club = await clubRepository.findById(player.clubId, {
+        transaction,
+        forUpdate: true,
+      });
+      if (!club) {
+        throw new Error('O clube do jogador bloqueado não foi encontrado.');
+      }
+      const contract = await contractRepository.findActiveByPlayerId(
+        player.id,
+        {
+          transaction,
+          forUpdate: true,
+        },
+      );
+      if (!contract || contract.clubId !== club.id) {
+        throw new Error(
+          'O contrato ativo do jogador bloqueado não foi encontrado.',
+        );
+      }
+
+      const now = new Date();
+      const marketValue = calculateMarketValue(
+        player.baseValue,
+        player.condition,
+        player.agility,
+        player.age,
+      );
+      const { remainingDays, penaltyRate } =
+        calculateRemainingDaysAndPenaltyRate(contract.loyaltyUntil, now);
+      const penalty = calculateSalePenalty(marketValue, penaltyRate);
+      const profit = new Decimal(marketValue)
+        .minus(contract.purchaseValue)
+        .toFixed(2);
+      const fee = calculateSaleCommission(profit);
+      const credit = new Decimal(marketValue)
+        .minus(penalty)
+        .minus(fee)
+        .toFixed(2);
+      const clubCash = new Decimal(club.cash).plus(credit).toFixed(2);
+      const contractStatus = new Decimal(penalty).gt(0)
+        ? 'RESCINDIDO'
+        : 'ENCERRADO';
+
+      await lineupRepository.removeByPlayerId(player.id, { transaction });
+      if (
+        !(await playerRepository.releaseFromClub(player.id, club.id, {
+          transaction,
+        })) ||
+        !(await clubRepository.updateCash(club.id, clubCash, {
+          transaction,
+        })) ||
+        !(await contractRepository.close(contract.id, contractStatus, now, {
+          transaction,
+        }))
+      ) {
+        throw new Error('A venda bloqueada não foi gravada.');
+      }
+      const entry = await transactionRepository.create(
+        {
+          clubId: club.id,
+          playerId: player.id,
+          playerName: player.name,
+          type: 'VENDA',
+          value: marketValue,
+          fee,
+          penalty,
+          profit,
+          cashChange: credit,
+          createdAt: now,
+        },
+        { transaction },
+      );
+
+      return {
+        id: entry.id,
+        club_id: entry.clubId,
+        player_id: entry.playerId,
+        player_name: entry.playerName,
+        type: entry.type,
+        value: Number(entry.value),
+        fee: Number(entry.fee),
+        penalty: Number(entry.penalty),
+        profit: Number(profit),
+        cash_change: Number(entry.cashChange),
+        created_at: formatBrasiliaDateTime(entry.createdAt),
+        purchase_value: Number(contract.purchaseValue),
+        remaining_days: remainingDays,
+        penalty_rate: penaltyRate,
+        contract_status: contractStatus,
         club_cash: Number(clubCash),
       };
     });

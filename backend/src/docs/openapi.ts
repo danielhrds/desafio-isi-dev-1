@@ -611,6 +611,72 @@ export const openApiDocument = {
         },
       },
     },
+    '/players/{id}/sell': {
+      post: {
+        summary: 'Vende um jogador do clube atual',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer', minimum: 1, maximum: 2147483647 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Venda concluída com valores, contrato e novo caixa',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: [
+                    'id',
+                    'club_id',
+                    'player_id',
+                    'player_name',
+                    'type',
+                    'value',
+                    'fee',
+                    'penalty',
+                    'profit',
+                    'cash_change',
+                    'created_at',
+                    'purchase_value',
+                    'remaining_days',
+                    'penalty_rate',
+                    'contract_status',
+                    'club_cash',
+                  ],
+                  properties: {
+                    id: { type: 'integer' },
+                    club_id: { type: 'integer' },
+                    player_id: { type: 'integer' },
+                    player_name: { type: 'string' },
+                    type: { type: 'string', enum: ['VENDA'] },
+                    value: { type: 'number' },
+                    fee: { type: 'number' },
+                    penalty: { type: 'number' },
+                    profit: { type: 'number' },
+                    cash_change: { type: 'number' },
+                    created_at: { type: 'string' },
+                    purchase_value: { type: 'number' },
+                    remaining_days: { type: 'integer', minimum: 0 },
+                    penalty_rate: { type: 'integer', enum: [0, 5, 10, 20] },
+                    contract_status: {
+                      type: 'string',
+                      enum: ['RESCINDIDO', 'ENCERRADO'],
+                    },
+                    club_cash: { type: 'number' },
+                  },
+                },
+              },
+            },
+          },
+          '404': { description: 'Jogador inexistente ou excluído' },
+          '409': { description: 'Jogador livre' },
+        },
+      },
+    },
     '/clubs': {
       get: {
         summary: 'Lista clubes com valor do elenco e patrimônio atuais',

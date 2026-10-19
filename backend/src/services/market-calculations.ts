@@ -36,3 +36,26 @@ export function calculatePurchaseFee(marketValue: string): string {
     ? value.mul('0.05').toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toFixed(2)
     : '0.00';
 }
+
+export function calculateSalePenalty(
+  marketValue: string,
+  penaltyRate: number,
+): string {
+  return Decimal.min(
+    new Decimal(marketValue)
+      .mul(penaltyRate)
+      .div(100)
+      .toDecimalPlaces(2, Decimal.ROUND_HALF_UP),
+    new Decimal(10),
+  ).toFixed(2);
+}
+
+export function calculateSaleCommission(profit: string): string {
+  const amount = new Decimal(profit);
+  if (amount.lte(0)) return '0.00';
+  return Decimal.min(amount, new Decimal(10))
+    .mul('0.10')
+    .plus(Decimal.max(amount.minus(10), new Decimal(0)).mul('0.20'))
+    .toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
+    .toFixed(2);
+}

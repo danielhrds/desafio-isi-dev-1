@@ -12,3 +12,11 @@ export const buyPlayer: RequestHandler = asyncHandler(
     response.status(200).json(purchase);
   },
 );
+
+export const sellPlayer: RequestHandler = asyncHandler(
+  async (request, response) => {
+    const playerId = parseResourceId(request.params.id);
+    const sale = await marketService.sellPlayer(playerId);
+    response.status(200).json(sale);
+  },
+);
