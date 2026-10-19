@@ -529,3 +529,78 @@ test('RN20: partida aguarda bloqueio do clube e lê a escalação após a altera
     if (!committed) await transaction.rollback();
   }
 }, 20_000);
+
+test('RN21/B22: GET da partida devolve o mesmo formato do POST e seis duelos em ordem', async () => {
+  const { home, away, homeIds, awayIds } = await fixture();
+  const created = await post(home.id, away.id);
+  expect(created.status).toBe(201);
+
+  const response = await request(app).get(created.headers.location);
+  expect(response.status).toBe(200);
+  expect(response.headers['content-type']).toMatch(/application\/json/);
+  expect(response.body).toEqual(created.body);
+  expect(response.body).toMatchObject({
+    home: {
+      club_id: home.id,
+      club_name: home.name,
+      formation: '2-1-1',
+      goals: 1,
+    },
+    away: {
+      club_id: away.id,
+      club_name: away.name,
+      formation: '2-1-1',
+      goals: 2,
+    },
+    result: 'VISITANTE',
+  });
+  expect(
+    response.body.duels.map((duel: { order: number }) => duel.order),
+  ).toEqual([1, 2, 3, 4, 5, 6]);
+  expect(response.body.duels[0]).toMatchObject({
+    attacking_club_id: home.id,
+    attacker: { player_id: homeIds[4], player_name: 'Otto Rangel', value: 75 },
+    defender: { player_id: awayIds[0], player_name: 'Ivo Teles', value: 72 },
+    goal: true,
+  });
+  expect(await counts()).toEqual({ matches: 1, duels: 6 });
+});
+
+test('RN20/RN21: GET preserva nomes, condição, valores e formação da partida após mudanças', async () => {
+  const { home, away, homeIds } = await fixture();
+  const created = await post(home.id, away.id);
+  expect(created.status).toBe(201);
+
+  await database.query(
+    `UPDATE jogadores
+     SET nome = :name, condicao = 'DOENTE', finalizacao = 1,
+         clube_id = NULL, excluido_em = CURRENT_TIMESTAMP
+     WHERE id = :id`,
+    { replacements: { name: 'Nome Novo', id: homeIds[4] } },
+  );
+  await database.query(`UPDATE clubes SET formacao = '3-1' WHERE id = :id`, {
+    replacements: { id: home.id },
+  });
+
+  const response = await request(app).get(`/api/v1/matches/${created.body.id}`);
+  expect(response.status).toBe(200);
+  expect(response.body).toEqual(created.body);
+  expect(response.body.home.formation).toBe('2-1-1');
+  expect(response.body.duels[0].attacker).toMatchObject({
+    player_name: 'Otto Rangel',
+    condition: 'APTO',
+    value: 75,
+  });
+  expect(await counts()).toEqual({ matches: 1, duels: 6 });
+});
+
+test.each(['abc', '0', '-1', '01', '1.5', '2147483648', '999'])(
+  'RN21/V8: GET /matches/%s responde 404 com message sem gravar',
+  async (id) => {
+    const response = await request(app).get(`/api/v1/matches/${id}`);
+    expect(response.status).toBe(404);
+    expect(response.headers['content-type']).toMatch(/application\/json/);
+    expect(response.body.message).toEqual(expect.any(String));
+    expect(await counts()).toEqual({ matches: 0, duels: 0 });
+  },
+);
