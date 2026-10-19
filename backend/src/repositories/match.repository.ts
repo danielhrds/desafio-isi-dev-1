@@ -40,9 +40,13 @@ export interface MatchWithDuelsRecord extends MatchRecord {
   duels: MatchDuelRecord[];
 }
 
-export interface MatchDetailRecord extends MatchWithDuelsRecord {
+export interface MatchSummaryRecord extends MatchRecord {
   homeClubName: string;
   awayClubName: string;
+}
+
+export interface MatchDetailRecord extends MatchSummaryRecord {
+  duels: MatchDuelRecord[];
 }
 
 interface RepositoryOptions {
@@ -59,6 +63,17 @@ function toMatchRecord(match: Match): MatchRecord {
     homeFormation: match.homeFormation,
     awayFormation: match.awayFormation,
     playedAt: match.playedAt,
+  };
+}
+
+function toMatchSummaryRecord(match: Match): MatchSummaryRecord {
+  if (!match.homeClub || !match.awayClub) {
+    throw new Error('Clube de partida histórica não encontrado.');
+  }
+  return {
+    ...toMatchRecord(match),
+    homeClubName: match.homeClub.name,
+    awayClubName: match.awayClub.name,
   };
 }
 
@@ -113,9 +128,6 @@ export const matchRepository = {
       transaction: options.transaction,
     });
     if (!match) return null;
-    if (!match.homeClub || !match.awayClub) {
-      throw new Error('Clube de partida histórica não encontrado.');
-    }
 
     const duels = await MatchDuel.findAll({
       where: { matchId: id },
@@ -123,9 +135,7 @@ export const matchRepository = {
       transaction: options.transaction,
     });
     return {
-      ...toMatchRecord(match),
-      homeClubName: match.homeClub.name,
-      awayClubName: match.awayClub.name,
+      ...toMatchSummaryRecord(match),
       duels: duels.map(toDuelRecord),
     };
   },
@@ -133,18 +143,22 @@ export const matchRepository = {
   async list(
     clubId?: number,
     options: RepositoryOptions = {},
-  ): Promise<MatchRecord[]> {
+  ): Promise<MatchSummaryRecord[]> {
     const matches = await Match.findAll({
       where:
         clubId === undefined
           ? undefined
           : { [Op.or]: [{ homeClubId: clubId }, { awayClubId: clubId }] },
+      include: [
+        { association: 'homeClub', attributes: ['name'] },
+        { association: 'awayClub', attributes: ['name'] },
+      ],
       order: [
         ['playedAt', 'DESC'],
         ['id', 'DESC'],
       ],
       transaction: options.transaction,
     });
-    return matches.map(toMatchRecord);
+    return matches.map(toMatchSummaryRecord);
   },
 };

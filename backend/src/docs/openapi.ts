@@ -58,6 +58,24 @@ const playerResponseSchema = {
   },
 };
 
+const matchSummarySchema = {
+  type: 'object',
+  required: ['id', 'played_at', 'home', 'away', 'result'],
+  properties: {
+    id: { type: 'integer' },
+    played_at: {
+      type: 'string',
+      example: '2026-11-12T15:00:00-03:00',
+    },
+    home: { $ref: '#/components/schemas/MatchClub' },
+    away: { $ref: '#/components/schemas/MatchClub' },
+    result: {
+      type: 'string',
+      enum: ['MANDANTE', 'VISITANTE', 'EMPATE'],
+    },
+  },
+};
+
 export const openApiDocument = {
   openapi: '3.1.0',
   info: {
@@ -121,21 +139,12 @@ export const openApiDocument = {
           goal: { type: 'boolean' },
         },
       },
+      MatchSummary: matchSummarySchema,
       MatchDetail: {
-        type: 'object',
-        required: ['id', 'played_at', 'home', 'away', 'result', 'duels'],
+        ...matchSummarySchema,
+        required: [...matchSummarySchema.required, 'duels'],
         properties: {
-          id: { type: 'integer' },
-          played_at: {
-            type: 'string',
-            example: '2026-11-12T15:00:00-03:00',
-          },
-          home: { $ref: '#/components/schemas/MatchClub' },
-          away: { $ref: '#/components/schemas/MatchClub' },
-          result: {
-            type: 'string',
-            enum: ['MANDANTE', 'VISITANTE', 'EMPATE'],
-          },
+          ...matchSummarySchema.properties,
           duels: {
             type: 'array',
             minItems: 6,
@@ -148,6 +157,35 @@ export const openApiDocument = {
   },
   paths: {
     '/matches': {
+      get: {
+        summary: 'Lista partidas da mais recente para a mais antiga',
+        parameters: [
+          {
+            name: 'club_id',
+            in: 'query',
+            description:
+              'Filtra mandante ou visitante; id entre 1 e 2147483647.',
+            schema: { type: 'string', pattern: '^[1-9][0-9]*$', example: '1' },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Partidas em ordem decrescente, sem os duelos',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/MatchSummary' },
+                },
+              },
+            },
+          },
+          '400': { description: 'club_id inválido; JSON com message' },
+          '404': {
+            description: 'Clube do filtro inexistente; JSON com message',
+          },
+        },
+      },
       post: {
         summary: 'Joga e grava uma partida entre dois clubes',
         description:

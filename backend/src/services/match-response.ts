@@ -1,8 +1,11 @@
-import type { MatchWithDuelsRecord } from '../repositories/match.repository.js';
+import type {
+  MatchRecord,
+  MatchWithDuelsRecord,
+} from '../repositories/match.repository.js';
 import { formatBrasiliaDateTime } from '../validation/brasilia-datetime.js';
 
-export function detailedMatchResponse(
-  match: MatchWithDuelsRecord,
+export function matchSummaryResponse(
+  match: MatchRecord,
   homeClubName: string,
   awayClubName: string,
 ) {
@@ -27,6 +30,16 @@ export function detailedMatchResponse(
         : match.homeGoals < match.awayGoals
           ? 'VISITANTE'
           : 'EMPATE',
+  };
+}
+
+export function detailedMatchResponse(
+  match: MatchWithDuelsRecord,
+  homeClubName: string,
+  awayClubName: string,
+) {
+  return {
+    ...matchSummaryResponse(match, homeClubName, awayClubName),
     duels: match.duels.map((duel) => ({
       order: duel.order,
       attacking_club_id: duel.attackingClubId,

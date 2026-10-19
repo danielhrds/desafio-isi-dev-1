@@ -10,7 +10,10 @@ import {
 import { matchRepository } from '../repositories/match.repository.js';
 import type { CreateMatchInput } from '../schemas/match.schema.js';
 import { calculateMatchDuels } from './match-calculations.js';
-import { detailedMatchResponse } from './match-response.js';
+import {
+  detailedMatchResponse,
+  matchSummaryResponse,
+} from './match-response.js';
 
 function completeStarters(
   club: ClubRecord,
@@ -36,6 +39,16 @@ function completeStarters(
 }
 
 export const matchService = {
+  async listMatches(clubId?: number) {
+    if (clubId !== undefined && !(await clubRepository.exists(clubId))) {
+      throw new AppError(404, 'Clube não encontrado.');
+    }
+    const matches = await matchRepository.list(clubId);
+    return matches.map((match) =>
+      matchSummaryResponse(match, match.homeClubName, match.awayClubName),
+    );
+  },
+
   async getMatchById(id: number) {
     const match = await matchRepository.findByIdWithDuels(id);
     if (!match) throw new AppError(404, 'Partida não encontrada.');

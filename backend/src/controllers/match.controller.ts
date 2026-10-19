@@ -1,8 +1,19 @@
 import type { RequestHandler } from 'express';
 import { asyncHandler } from '../middleware/async-handler.js';
-import { createMatchSchema } from '../schemas/match.schema.js';
+import {
+  createMatchSchema,
+  listMatchesQuerySchema,
+} from '../schemas/match.schema.js';
 import { matchService } from '../services/match.service.js';
 import { parseResourceId } from '../validation/resource-id.js';
+
+export const listMatches: RequestHandler = asyncHandler(
+  async (request, response) => {
+    const query = listMatchesQuerySchema.parse(request.query);
+    const matches = await matchService.listMatches(query.club_id);
+    response.status(200).json(matches);
+  },
+);
 
 export const getMatchById: RequestHandler = asyncHandler(
   async (request, response) => {
