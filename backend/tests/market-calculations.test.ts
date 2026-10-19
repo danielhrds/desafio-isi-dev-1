@@ -2,6 +2,8 @@ import { AppError } from '../src/errors/app.error.js';
 import {
   calculateRemainingDaysAndPenaltyRate,
   calculatePurchaseFee,
+  calculateSaleCommission,
+  calculateSalePenalty,
   validateLoyaltyPeriod,
 } from '../src/services/market-calculations.js';
 import {
@@ -42,6 +44,38 @@ describe('RN15: dias restantes e percentual de multa', () => {
       remainingDays,
       penaltyRate,
     });
+  });
+});
+
+describe('RN15: multa monetária de venda', () => {
+  it.each([
+    ['40.00', 0, '0.00'],
+    ['30.00', 5, '1.50'],
+    ['26.15', 5, '1.31'],
+    ['40.00', 10, '4.00'],
+    ['42.50', 20, '8.50'],
+    ['75.00', 20, '10.00'],
+    ['49.99', 20, '10.00'],
+    ['50.01', 20, '10.00'],
+  ])('%s a %i%% → multa %s', (marketValue, penaltyRate, expected) => {
+    expect(calculateSalePenalty(marketValue, penaltyRate)).toBe(expected);
+  });
+});
+
+describe('RN16: comissão marginal arredondada uma vez', () => {
+  it.each([
+    ['-7.50', '0.00'],
+    ['0.00', '0.00'],
+    ['0.04', '0.00'],
+    ['0.05', '0.01'],
+    ['3.00', '0.30'],
+    ['3.85', '0.39'],
+    ['10.00', '1.00'],
+    ['10.01', '1.00'],
+    ['10.03', '1.01'],
+    ['15.00', '2.00'],
+  ])('lucro %s → comissão %s', (profit, expected) => {
+    expect(calculateSaleCommission(profit)).toBe(expected);
   });
 });
 
