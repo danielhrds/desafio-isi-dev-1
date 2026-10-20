@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AxiosError, AxiosHeaders } from 'axios';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App.js';
 import { listClubs } from '../services/clubs.js';
@@ -48,7 +49,9 @@ function renderApp() {
   });
   function Providers({ children }: { children: ReactNode }) {
     return (
-      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      <MemoryRouter initialEntries={['/jogadores']}>
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      </MemoryRouter>
     );
   }
   return render(<App />, { wrapper: Providers });
@@ -72,7 +75,7 @@ describe('F01 player list screen', () => {
         .getAllByRole('columnheader')
         .map((header) => header.textContent),
     ).toEqual([
-      'Nome',
+      'Jogador',
       'Posição',
       'Overall',
       'Agilidade',
@@ -88,8 +91,16 @@ describe('F01 player list screen', () => {
     expect(within(table).getByText('Mal condicionado')).toBeInTheDocument();
     expect(within(table).getByText('37,00')).toBeInTheDocument();
     expect(within(table).getByText('28,60')).toBeInTheDocument();
-    expect(screen.getByText('2 encontrados')).toBeInTheDocument();
-    expect(screen.getByText('Mostrando 2 de 2 jogadores')).toBeInTheDocument();
+    expect(within(table).getByText('ML')).toBeInTheDocument();
+    expect(within(table).getByText('Meio-campo')).toBeInTheDocument();
+    expect(
+      within(table).getByRole('progressbar', { name: 'Agilidade de Meia Lua' }),
+    ).toHaveAttribute('aria-valuenow', '85');
+    expect(
+      screen.getByText('Mostrando 1–2 de 2 jogadores'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Anterior' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Próxima' })).toBeDisabled();
     expect(listPlayers).toHaveBeenCalledExactlyOnceWith(1);
     expect(listClubs).toHaveBeenCalledTimes(1);
   });
@@ -114,7 +125,6 @@ describe('F01 player list screen', () => {
     expect(
       await screen.findByText('Nenhum jogador encontrado'),
     ).toBeInTheDocument();
-    expect(screen.getByText('0 encontrados')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
@@ -161,12 +171,89 @@ describe('F01 player list screen', () => {
     renderApp();
 
     expect(
-      await screen.findByText('Não foi possível carregar os jogadores.'),
+      await screen.findByText('Não foi possível carregar os jogadores'),
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
 
-    expect(await screen.findByText('Águias FC')).toBeInTheDocument();
+    expect(
+      await within(screen.getByRole('table', { name: 'Jogadores' })).findByText(
+        'Águias FC',
+      ),
+    ).toBeInTheDocument();
     expect(listClubs).toHaveBeenCalledTimes(2);
     expect(listPlayers).toHaveBeenCalledTimes(1);
+  });
+
+  it('navigates through 10-item pages using the API meta, including the short last page', async () => {
+    const names = [
+      'André Lacerda',
+      'Bruno Tavares',
+      'Danilo Freitas',
+      'Diego Ramos',
+      'Eduardo Paiva',
+      'Ênio Carvalho',
+      'Felipe Moura',
+      'Gabriel Antunes',
+      'Heitor Gomes',
+      'Ícaro Mendes',
+      'João Silva',
+      'Leandro Costa',
+      'Marcelo Reis',
+      'Natan Alves',
+      'Otávio Rezende',
+      'Paulo Moreira',
+      'Rafael Nogueira',
+      'Renan Castro',
+      'Sávio Lima',
+      'Tiago Moraes',
+      'Ulisses Rocha',
+      'Vitor Martins',
+      'Wesley Santos',
+    ];
+    vi.mocked(listPlayers).mockImplementation(async (requestedPage) => {
+      const first = (requestedPage - 1) * 10;
+      return {
+        data: names.slice(first, first + 10).map((name, index) => ({
+          ...page.data[0],
+          id: first + index + 1,
+          name,
+        })),
+        meta: {
+          page: requestedPage,
+          limit: 10,
+          total_items: 23,
+          total_pages: 3,
+        },
+      };
+    });
+    const user = userEvent.setup();
+    renderApp();
+
+    expect(
+      await screen.findByText('Mostrando 1–10 de 23 jogadores'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Anterior' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Próxima' }));
+
+    expect(
+      await screen.findByText('Mostrando 11–20 de 23 jogadores'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Jogadores' })).toHaveTextContent(
+      'João Silva',
+    );
+    await user.click(screen.getByRole('button', { name: 'Página 3' }));
+
+    expect(
+      await screen.findByText('Mostrando 21–23 de 23 jogadores'),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('table', { name: 'Jogadores' })).getAllByRole(
+        'row',
+      ),
+    ).toHaveLength(4);
+    expect(screen.getByRole('button', { name: 'Próxima' })).toBeDisabled();
+    expect(listPlayers).toHaveBeenNthCalledWith(1, 1);
+    expect(listPlayers).toHaveBeenNthCalledWith(2, 2);
+    expect(listPlayers).toHaveBeenNthCalledWith(3, 3);
   });
 });
