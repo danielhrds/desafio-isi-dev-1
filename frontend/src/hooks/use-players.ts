@@ -1,9 +1,36 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { listPlayers } from '../services/players.js';
+import type { PlayerListFilters } from '../types/player.js';
 
-export function usePlayers(page: number) {
+export function usePlayers(page: number, filters?: PlayerListFilters) {
   return useQuery({
-    queryKey: ['players', page],
-    queryFn: () => listPlayers(page),
+    queryKey: ['players', page, filters ?? {}],
+    queryFn: () => (filters ? listPlayers(page, filters) : listPlayers(page)),
   });
+}
+
+export function usePlayerCounts(filters: PlayerListFilters) {
+  const countFilters = { ...filters };
+  delete countFilters.free;
+  delete countFilters.club_id;
+  delete countFilters.sort;
+
+  const [all, free, assigned] = useQueries({
+    queries: ([undefined, true, false] as const).map((freeValue) => {
+      const variant = {
+        ...countFilters,
+        ...(freeValue === undefined ? {} : { free: freeValue }),
+      };
+      return {
+        queryKey: ['player-count', variant],
+        queryFn: () => listPlayers(1, variant, 1),
+      };
+    }),
+  });
+
+  return {
+    all: all.data?.meta.total_items,
+    free: free.data?.meta.total_items,
+    assigned: assigned.data?.meta.total_items,
+  };
 }

@@ -2,6 +2,22 @@ export type PlayerPosition = 'GOL' | 'ZAG' | 'LAT' | 'MEI' | 'ATA';
 
 export type PlayerCondition = 'APTO' | 'MAL_CONDICIONADO' | 'DOENTE';
 
+export type PlayerSort =
+  'name' | 'value_asc' | 'value_desc' | 'age_asc' | 'age_desc' | 'position';
+
+export interface PlayerListFilters {
+  search?: string;
+  position?: PlayerPosition;
+  condition?: PlayerCondition;
+  free?: boolean;
+  club_id?: number;
+  min_age?: number;
+  max_age?: number;
+  min_value?: number;
+  max_value?: number;
+  sort?: PlayerSort;
+}
+
 export interface PlayerListItem {
   id: number;
   name: string;

@@ -32,7 +32,8 @@ export function PlayerPagination({
   return (
     <div className="flex flex-col gap-3 border-t px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
       <p className="tabular-nums text-muted-foreground">
-        Mostrando {first}–{last} de {meta.total_items} jogadores
+        Mostrando {first}–{last} de {meta.total_items}{' '}
+        {meta.total_items === 1 ? 'jogador' : 'jogadores'}
       </p>
       <nav
         aria-label="Paginação de jogadores"

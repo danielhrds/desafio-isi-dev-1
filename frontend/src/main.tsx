@@ -6,12 +6,12 @@ import {
   RouterProvider,
   createBrowserRouter,
 } from 'react-router-dom';
-import { App } from './pages/App.js';
+import { PlayersPage } from './pages/PlayersPage.js';
 import './styles.css';
 
 const queryClient = new QueryClient();
 const router = createBrowserRouter([
-  { path: '/jogadores', element: <App /> },
+  { path: '/jogadores', element: <PlayersPage /> },
   { path: '*', element: <Navigate to="/jogadores" replace /> },
 ]);
 
