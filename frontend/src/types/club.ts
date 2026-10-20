@@ -28,6 +28,22 @@ export interface ClubDetail extends ClubSummary {
   players: ClubRosterPlayer[];
 }
 
+export const clubFormations = ['3-1', '2-2', '2-1-1', '1-2-1'] as const;
+
+export type ClubFormation = (typeof clubFormations)[number];
+
+export interface ClubLineup {
+  club_id: number;
+  formation: ClubFormation | null;
+  complete: boolean;
+  players: PlayerDetail[];
+}
+
+export interface SaveClubLineupInput {
+  formation: ClubFormation;
+  player_ids: number[];
+}
+
 export interface CreateClubInput {
   name: string;
   acronym: string;
