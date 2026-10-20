@@ -8,6 +8,7 @@ import {
 } from 'react-router-dom';
 import { PlayersPage } from './pages/PlayersPage.js';
 import { ClubsPage } from './pages/ClubsPage.js';
+import { Toaster } from './components/ui/sonner.js';
 import './styles.css';
 
 const queryClient = new QueryClient();
@@ -21,6 +22,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
+      <Toaster position="bottom-right" theme="light" />
     </QueryClientProvider>
   </React.StrictMode>,
 );

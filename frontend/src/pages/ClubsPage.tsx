@@ -4,11 +4,14 @@ import axios from 'axios';
 import {
   ArrowDownUp,
   LoaderCircle,
+  Plus,
   SearchX,
   ServerOff,
   Shield,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { AppShell } from '@/components/layout/app-shell';
+import { ClubCreateDialog } from '@/components/clubs/club-create-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -77,6 +80,7 @@ function ClubsTableSkeleton() {
 export function ClubsPage() {
   const queryClient = useQueryClient();
   const [sort, setSort] = useState<ClubSort>('name');
+  const [createOpen, setCreateOpen] = useState(false);
   const clubs = useClubSummaries(sort);
   const sidebarClubs = useClubs();
   const players = usePlayers(1);
@@ -107,6 +111,14 @@ export function ClubsPage() {
               </p>
             </div>
           </div>
+          <Button
+            type="button"
+            className="self-start"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus aria-hidden="true" />
+            Novo clube
+          </Button>
         </div>
 
         {clubs.isError ? (
@@ -152,8 +164,18 @@ export function ClubsPage() {
             </div>
             <p className="font-semibold">Nenhum clube cadastrado</p>
             <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-              Os clubes cadastrados aparecerão aqui.
+              Crie o primeiro clube com nome e sigla. Ele começa com 300,00 em
+              caixa e sem jogadores.
             </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-4"
+              onClick={() => setCreateOpen(true)}
+            >
+              <Plus aria-hidden="true" />
+              Novo clube
+            </Button>
           </div>
         ) : (
           <section
@@ -235,6 +257,18 @@ export function ClubsPage() {
             Clubes pelo nome ou pelo patrimônio; em caso de empate, a API ordena
             pelo nome.
           </p>
+        )}
+        {createOpen && (
+          <ClubCreateDialog
+            open={createOpen}
+            onOpenChange={setCreateOpen}
+            onCreated={(club) => {
+              setCreateOpen(false);
+              toast.success('Clube criado', {
+                description: `${club.name} (${club.acronym}) começa com ${moneyFormatter.format(club.cash)} em caixa.`,
+              });
+            }}
+          />
         )}
       </main>
     </AppShell>
