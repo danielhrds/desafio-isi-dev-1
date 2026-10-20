@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
 import {
+  ArrowRight,
   CalendarDays,
   CheckCircle2,
   Clock3,
@@ -11,12 +12,16 @@ import {
   ShoppingCart,
 } from 'lucide-react';
 import { Controller, useForm } from 'react-hook-form';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useClubSummaries } from '@/hooks/use-clubs';
 import { useBuyPlayer } from '@/hooks/use-market';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +32,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import type { BuyPlayerResult } from '@/types/market';
 import {
   Select,
@@ -46,6 +52,144 @@ const moneyFormatter = new Intl.NumberFormat('pt-BR', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
+
+const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+  timeZone: 'America/Sao_Paulo',
+});
+
+function PurchaseResultRow({
+  label,
+  description,
+  value,
+  emphasized = false,
+}: {
+  label: string;
+  description?: string;
+  value: ReactNode;
+  emphasized?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-center justify-between gap-4 px-3.5 py-3',
+        emphasized && 'bg-muted-subtle',
+      )}
+    >
+      <dt className="min-w-0">
+        <span className={cn('block text-sm', emphasized && 'font-semibold')}>
+          {label}
+        </span>
+        {description && (
+          <span className="mt-0.5 block text-xs text-muted-foreground">
+            {description}
+          </span>
+        )}
+      </dt>
+      <dd
+        className={cn(
+          'shrink-0 text-right text-sm tabular-nums',
+          emphasized && 'font-semibold',
+        )}
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+function PurchaseSuccessContent({
+  result,
+  clubName,
+  onClose,
+}: {
+  result: BuyPlayerResult;
+  clubName: string;
+  onClose: () => void;
+}) {
+  return (
+    <div className="space-y-4 sm:space-y-5">
+      <div
+        aria-hidden="true"
+        className="flex size-9 items-center justify-center rounded-full bg-success-soft text-success-soft-foreground"
+      >
+        <CheckCircle2 className="size-5" />
+      </div>
+
+      <DialogHeader className="space-y-1">
+        <DialogTitle id="purchase-success-title">Compra concluída</DialogTitle>
+        <DialogDescription id="purchase-success-description">
+          {result.player_name} agora é do {clubName}.
+        </DialogDescription>
+      </DialogHeader>
+
+      <Card className="gap-0 overflow-hidden py-0 shadow-none">
+        <dl className="divide-y">
+          <PurchaseResultRow
+            label="Valor"
+            description="Valor de mercado no momento da compra"
+            value={moneyFormatter.format(result.value)}
+          />
+          <PurchaseResultRow
+            label="Taxa"
+            description={
+              result.fee > 0
+                ? '5% do valor, porque passa de 30,00'
+                : 'Sem taxa até 30,00'
+            }
+            value={moneyFormatter.format(result.fee)}
+          />
+          <PurchaseResultRow
+            label="Custo total"
+            description="Valor + taxa"
+            value={moneyFormatter.format(Math.abs(result.cash_change))}
+            emphasized
+          />
+          <PurchaseResultRow
+            label="Fim da fidelidade"
+            value={dateTimeFormatter.format(
+              new Date(result.contract.loyalty_until),
+            )}
+          />
+          <PurchaseResultRow
+            label="Contrato"
+            value={
+              <Badge
+                variant="outline"
+                className="border-success-soft-border bg-success-soft text-success-soft-foreground"
+              >
+                <span className="size-1.5 rounded-full bg-success" />
+                {result.contract.status}
+              </Badge>
+            }
+          />
+          <PurchaseResultRow
+            label={`Novo caixa do ${clubName}`}
+            value={moneyFormatter.format(result.club_cash)}
+            emphasized
+          />
+        </dl>
+      </Card>
+
+      <DialogFooter className="border-t pt-4 sm:flex-row">
+        <Button asChild variant="outline" className="w-full sm:w-auto">
+          <Link to={`/clubes/${result.club_id}`}>
+            Ver clube
+            <ArrowRight aria-hidden="true" />
+          </Link>
+        </Button>
+        <Button type="button" className="w-full sm:w-auto" onClick={onClose}>
+          Fechar
+        </Button>
+      </DialogFooter>
+    </div>
+  );
+}
 
 const positionLabels: Record<PlayerPosition, string> = {
   GOL: 'Goleiro',
@@ -152,8 +296,6 @@ export function PlayerBuyDialog({
   }
 
   const isSubmitting = buyMutation.isPending;
-  const isCompleted = purchaseResult !== null;
-
   return (
     <Dialog
       open
@@ -161,15 +303,36 @@ export function PlayerBuyDialog({
         if (!open && !isSubmitting) onClose();
       }}
     >
-      <DialogContent className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-5 sm:max-w-xl sm:p-6">
-        <DialogHeader>
-          <DialogTitle>Comprar jogador</DialogTitle>
-          <DialogDescription>
+      <DialogContent
+        aria-labelledby={
+          purchaseResult ? 'purchase-success-title' : 'purchase-dialog-title'
+        }
+        aria-describedby={
+          purchaseResult
+            ? 'purchase-success-description'
+            : 'purchase-dialog-description'
+        }
+        className={cn(
+          'max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-5 sm:p-6',
+          purchaseResult ? 'sm:max-w-lg' : 'sm:max-w-xl',
+        )}
+      >
+        {purchaseResult && (
+          <PurchaseSuccessContent
+            result={purchaseResult}
+            clubName={selectedClub?.name ?? 'clube'}
+            onClose={onClose}
+          />
+        )}
+        <DialogHeader hidden={Boolean(purchaseResult)}>
+          <DialogTitle id="purchase-dialog-title">Comprar jogador</DialogTitle>
+          <DialogDescription id="purchase-dialog-description">
             Escolha o clube comprador e até quando vai a fidelidade do contrato.
           </DialogDescription>
         </DialogHeader>
 
         <form
+          hidden={Boolean(purchaseResult)}
           className="space-y-5"
           onSubmit={form.handleSubmit(submitPurchase)}
         >
@@ -191,19 +354,6 @@ export function PlayerBuyDialog({
               <div>
                 <AlertTitle>{purchaseError.title}</AlertTitle>
                 <AlertDescription>{purchaseError.description}</AlertDescription>
-              </div>
-            </Alert>
-          )}
-
-          {purchaseResult && (
-            <Alert variant="success" role="status" aria-live="polite">
-              <CheckCircle2 aria-hidden="true" />
-              <div>
-                <AlertTitle>Compra concluída</AlertTitle>
-                <AlertDescription>
-                  {purchaseResult.player_name} agora faz parte do elenco de{' '}
-                  {selectedClub?.name ?? 'clube selecionado'}.
-                </AlertDescription>
               </div>
             </Alert>
           )}
@@ -246,7 +396,6 @@ export function PlayerBuyDialog({
                     }}
                     disabled={
                       isSubmitting ||
-                      isCompleted ||
                       clubsQuery.isPending ||
                       clubsQuery.isError ||
                       clubs.length === 0
@@ -339,7 +488,7 @@ export function PlayerBuyDialog({
                     id="buy-loyalty-date"
                     type="date"
                     className="pl-9"
-                    disabled={isSubmitting || isCompleted}
+                    disabled={isSubmitting}
                     aria-invalid={Boolean(form.formState.errors.loyalty_date)}
                     aria-describedby={
                       form.formState.errors.loyalty_date
@@ -372,7 +521,7 @@ export function PlayerBuyDialog({
                     type="time"
                     step={60}
                     className="pl-9"
-                    disabled={isSubmitting || isCompleted}
+                    disabled={isSubmitting}
                     aria-label="Horário do fim da fidelidade"
                     aria-invalid={Boolean(form.formState.errors.loyalty_time)}
                     aria-describedby={
@@ -418,31 +567,29 @@ export function PlayerBuyDialog({
               disabled={isSubmitting}
               onClick={onClose}
             >
-              {isCompleted ? 'Fechar' : 'Cancelar'}
+              Cancelar
             </Button>
-            {!isCompleted && (
-              <Button
-                type="submit"
-                className="w-full sm:w-auto"
-                disabled={
-                  isSubmitting ||
-                  clubsQuery.isPending ||
-                  clubsQuery.isError ||
-                  clubs.length === 0
-                }
-              >
-                {isSubmitting ? (
-                  <LoaderCircle aria-hidden="true" className="animate-spin" />
-                ) : (
-                  <ShoppingCart aria-hidden="true" />
-                )}
-                {isSubmitting
-                  ? 'Comprando…'
-                  : purchaseError?.isNetworkError
-                    ? 'Tentar de novo'
-                    : 'Confirmar compra'}
-              </Button>
-            )}
+            <Button
+              type="submit"
+              className="w-full sm:w-auto"
+              disabled={
+                isSubmitting ||
+                clubsQuery.isPending ||
+                clubsQuery.isError ||
+                clubs.length === 0
+              }
+            >
+              {isSubmitting ? (
+                <LoaderCircle aria-hidden="true" className="animate-spin" />
+              ) : (
+                <ShoppingCart aria-hidden="true" />
+              )}
+              {isSubmitting
+                ? 'Comprando…'
+                : purchaseError?.isNetworkError
+                  ? 'Tentar de novo'
+                  : 'Confirmar compra'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
