@@ -1,8 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { LoaderCircle, SearchX, ServerOff, UsersRound, X } from 'lucide-react';
+import {
+  LoaderCircle,
+  Plus,
+  SearchX,
+  ServerOff,
+  UsersRound,
+  X,
+} from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
+import { PlayerCreateDialog } from '@/components/players/player-create-dialog';
+import { PlayerCreatedDialog } from '@/components/players/player-created-dialog';
 import { PlayerFilters } from '@/components/players/player-filters';
 import { PlayerPagination } from '@/components/players/player-pagination';
 import {
@@ -13,7 +22,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { useClubs } from '@/hooks/use-clubs';
 import { usePlayerCounts, usePlayers } from '@/hooks/use-players';
-import type { PlayerListFilters } from '@/types/player';
+import type { PlayerDetail, PlayerListFilters } from '@/types/player';
 
 function errorMessage(error: unknown): string {
   if (axios.isAxiosError<{ message?: string }>(error)) {
@@ -29,6 +38,8 @@ export function PlayersPage() {
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<PlayerListFilters>({});
   const [searchInput, setSearchInput] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createdPlayer, setCreatedPlayer] = useState<PlayerDetail | null>(null);
   const queryFilters = Object.keys(filters).length > 0 ? filters : undefined;
   const players = usePlayers(page, queryFilters);
   const allPlayers = usePlayers(1);
@@ -89,17 +100,29 @@ export function PlayersPage() {
       }}
     >
       <div className="min-w-0 flex-1 px-4 py-8 md:px-8">
-        <div className="mb-7 flex items-center gap-4">
-          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-primary bg-primary-soft text-primary">
-            <UsersRound aria-hidden="true" className="size-5" />
+        <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-primary bg-primary-soft text-primary">
+              <UsersRound aria-hidden="true" className="size-5" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">
+                Jogadores
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Cadastre jogadores, acompanhe os indicadores e compre os que
+                estão livres.
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Jogadores</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Cadastre jogadores, acompanhe os indicadores e compre os que estão
-              livres.
-            </p>
-          </div>
+          <Button
+            type="button"
+            className="self-start"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus aria-hidden="true" />
+            Novo jogador
+          </Button>
         </div>
 
         <PlayerFilters
@@ -218,6 +241,23 @@ export function PlayersPage() {
                 ? 'Os filtros se combinam: a lista mostra só quem atende a todos. A faixa de valor usa o valor de mercado, nunca o valor base.'
                 : 'Overall e valor de mercado são calculados pela API a cada consulta.'}
         </p>
+        {createOpen && (
+          <PlayerCreateDialog
+            open={createOpen}
+            onOpenChange={setCreateOpen}
+            onCreated={(player) => {
+              clearFilters();
+              setCreateOpen(false);
+              setCreatedPlayer(player);
+            }}
+          />
+        )}
+        {createdPlayer && (
+          <PlayerCreatedDialog
+            player={createdPlayer}
+            onClose={() => setCreatedPlayer(null)}
+          />
+        )}
       </div>
     </AppShell>
   );

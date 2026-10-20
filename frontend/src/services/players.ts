@@ -1,5 +1,10 @@
 import { apiClient } from './api-client.js';
-import type { PlayerListFilters, PlayerListResponse } from '../types/player.js';
+import type {
+  CreatePlayerInput,
+  PlayerDetail,
+  PlayerListFilters,
+  PlayerListResponse,
+} from '../types/player.js';
 
 const PAGE_SIZE = 10;
 
@@ -12,5 +17,12 @@ export async function listPlayers(
     params: { ...filters, page, limit },
   });
 
+  return response.data;
+}
+
+export async function createPlayer(
+  input: CreatePlayerInput,
+): Promise<PlayerDetail> {
+  const response = await apiClient.post<PlayerDetail>('/players', input);
   return response.data;
 }

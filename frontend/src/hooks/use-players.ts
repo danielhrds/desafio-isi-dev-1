@@ -1,5 +1,10 @@
-import { useQueries, useQuery } from '@tanstack/react-query';
-import { listPlayers } from '../services/players.js';
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+import { createPlayer, listPlayers } from '../services/players.js';
 import type { PlayerListFilters } from '../types/player.js';
 
 export function usePlayers(page: number, filters?: PlayerListFilters) {
@@ -33,4 +38,18 @@ export function usePlayerCounts(filters: PlayerListFilters) {
     free: free.data?.meta.total_items,
     assigned: assigned.data?.meta.total_items,
   };
+}
+
+export function useCreatePlayer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: createPlayer,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['players'] }),
+        queryClient.invalidateQueries({ queryKey: ['player-count'] }),
+      ]);
+    },
+  });
 }

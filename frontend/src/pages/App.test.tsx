@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { AxiosError, AxiosHeaders } from 'axios';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { App } from './App.js';
+import { PlayersPage } from './PlayersPage.js';
 import { listClubs } from '../services/clubs.js';
 import { listPlayers } from '../services/players.js';
 import type { PlayerListResponse } from '../types/player.js';
@@ -54,7 +54,7 @@ function renderApp() {
       </MemoryRouter>
     );
   }
-  return render(<App />, { wrapper: Providers });
+  return render(<PlayersPage />, { wrapper: Providers });
 }
 
 beforeEach(() => {

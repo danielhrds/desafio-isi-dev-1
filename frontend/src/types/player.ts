@@ -31,6 +31,30 @@ export interface PlayerListItem {
   club_id: number | null;
 }
 
+export interface CreatePlayerInput {
+  name: string;
+  position: PlayerPosition;
+  agility: number;
+  age: number;
+  pace: number;
+  shooting: number;
+  passing: number;
+  dribbling: number;
+  defending: number;
+  physical: number;
+  potential: number;
+}
+
+export interface PlayerDetail extends PlayerListItem {
+  pace: number;
+  shooting: number;
+  passing: number;
+  dribbling: number;
+  defending: number;
+  physical: number;
+  potential: number;
+}
+
 export interface PlayerListMeta {
   page: number;
   limit: number;
