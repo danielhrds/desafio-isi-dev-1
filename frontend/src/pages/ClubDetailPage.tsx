@@ -1,6 +1,7 @@
 import axios from 'axios';
 import {
   ArrowLeft,
+  ClipboardList,
   Coins,
   Landmark,
   SearchX,
@@ -33,6 +34,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ClubLineupTab } from '@/components/clubs/club-lineup-tab';
 import { useClubDetail, useClubs } from '@/hooks/use-clubs';
 import { usePlayers } from '@/hooks/use-players';
 import { cn } from '@/lib/utils';
@@ -474,7 +477,34 @@ export function ClubDetailPage() {
               />
             </section>
 
-            <ClubRoster players={club.data.players} />
+            <Tabs defaultValue="elenco" className="min-w-0">
+              <TabsList
+                variant="line"
+                className="w-full justify-start rounded-none border-b p-0"
+              >
+                <TabsTrigger value="elenco" className="flex-none px-4">
+                  <Shirt aria-hidden="true" />
+                  Elenco
+                  <Badge variant="secondary" className="ml-1">
+                    {club.data.players.length}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="escalacao" className="flex-none px-4">
+                  <ClipboardList aria-hidden="true" />
+                  Escalação
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="elenco" className="pt-4">
+                <ClubRoster players={club.data.players} />
+              </TabsContent>
+              <TabsContent value="escalacao" className="pt-4">
+                <ClubLineupTab
+                  clubId={club.data.id}
+                  clubName={club.data.name}
+                  roster={club.data.players}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
         ) : null}
       </main>
