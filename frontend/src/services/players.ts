@@ -4,6 +4,7 @@ import type {
   PlayerDetail,
   PlayerListFilters,
   PlayerListResponse,
+  UpdatePlayerInput,
 } from '../types/player.js';
 
 const PAGE_SIZE = 10;
@@ -24,5 +25,13 @@ export async function createPlayer(
   input: CreatePlayerInput,
 ): Promise<PlayerDetail> {
   const response = await apiClient.post<PlayerDetail>('/players', input);
+  return response.data;
+}
+
+export async function updatePlayer(
+  id: number,
+  input: UpdatePlayerInput,
+): Promise<PlayerDetail> {
+  const response = await apiClient.put<PlayerDetail>(`/players/${id}`, input);
   return response.data;
 }

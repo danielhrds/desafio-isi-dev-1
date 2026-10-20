@@ -4,8 +4,12 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { createPlayer, listPlayers } from '../services/players.js';
-import type { PlayerListFilters } from '../types/player.js';
+import {
+  createPlayer,
+  listPlayers,
+  updatePlayer,
+} from '../services/players.js';
+import type { PlayerListFilters, UpdatePlayerInput } from '../types/player.js';
 
 export function usePlayers(page: number, filters?: PlayerListFilters) {
   return useQuery({
@@ -49,6 +53,22 @@ export function useCreatePlayer() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['players'] }),
         queryClient.invalidateQueries({ queryKey: ['player-count'] }),
+      ]);
+    },
+  });
+}
+
+export function useUpdatePlayer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, input }: { id: number; input: UpdatePlayerInput }) =>
+      updatePlayer(id, input),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['players'] }),
+        queryClient.invalidateQueries({ queryKey: ['player-count'] }),
+        queryClient.invalidateQueries({ queryKey: ['clubs'] }),
       ]);
     },
   });

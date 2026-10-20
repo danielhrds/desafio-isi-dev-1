@@ -45,6 +45,13 @@ export interface CreatePlayerInput {
   potential: number;
 }
 
+export interface UpdatePlayerInput {
+  name: string;
+  position: PlayerPosition;
+  age: number;
+  agility: number;
+}
+
 export interface PlayerDetail extends PlayerListItem {
   pace: number;
   shooting: number;

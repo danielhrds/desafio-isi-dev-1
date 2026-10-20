@@ -1,5 +1,14 @@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -10,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { MoreHorizontal, Pencil } from 'lucide-react';
 import type { ClubListItem } from '@/types/club';
 import type {
   PlayerCondition,
@@ -81,6 +91,9 @@ function tableHeader() {
           Valor de mercado
         </TableHead>
         <TableHead className="pr-4 text-muted-foreground">Clube</TableHead>
+        <TableHead className="w-10 pr-2">
+          <span className="sr-only">Ações</span>
+        </TableHead>
       </TableRow>
     </TableHeader>
   );
@@ -89,14 +102,16 @@ function tableHeader() {
 export function PlayerTable({
   players,
   clubs,
+  onEdit,
 }: {
   players: PlayerListItem[];
   clubs: ClubListItem[];
+  onEdit: (player: PlayerListItem) => void;
 }) {
   const clubById = new Map(clubs.map((club) => [club.id, club]));
 
   return (
-    <Table aria-label="Jogadores" className="min-w-[980px]">
+    <Table aria-label="Jogadores" className="min-w-[1020px]">
       {tableHeader()}
       <TableBody>
         {players.map((player) => {
@@ -193,6 +208,30 @@ export function PlayerTable({
                   'Clube indisponível'
                 )}
               </TableCell>
+              <TableCell className="w-10 pr-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Abrir ações de ${player.name}`}
+                    >
+                      <MoreHorizontal aria-hidden="true" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel className="truncate font-normal text-muted-foreground">
+                      {player.name}
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => onEdit(player)}>
+                      <Pencil aria-hidden="true" />
+                      Editar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
             </TableRow>
           );
         })}
@@ -203,7 +242,7 @@ export function PlayerTable({
 
 export function PlayerTableSkeleton() {
   return (
-    <Table aria-label="Carregando jogadores" className="min-w-[980px]">
+    <Table aria-label="Carregando jogadores" className="min-w-[1020px]">
       {tableHeader()}
       <TableBody>
         {Array.from({ length: 10 }, (_, index) => (
@@ -219,6 +258,9 @@ export function PlayerTableSkeleton() {
                 <Skeleton className="h-4 w-12" />
               </TableCell>
             ))}
+            <TableCell>
+              <Skeleton className="size-8 rounded-md" />
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>

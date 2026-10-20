@@ -10,6 +10,7 @@ import {
   X,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
+import { PlayerEditDialog } from '@/components/players/player-edit-dialog';
 import { PlayerCreateDialog } from '@/components/players/player-create-dialog';
 import { PlayerCreatedDialog } from '@/components/players/player-created-dialog';
 import { PlayerFilters } from '@/components/players/player-filters';
@@ -22,7 +23,11 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { useClubs } from '@/hooks/use-clubs';
 import { usePlayerCounts, usePlayers } from '@/hooks/use-players';
-import type { PlayerDetail, PlayerListFilters } from '@/types/player';
+import type {
+  PlayerDetail,
+  PlayerListFilters,
+  PlayerListItem,
+} from '@/types/player';
 
 function errorMessage(error: unknown): string {
   if (axios.isAxiosError<{ message?: string }>(error)) {
@@ -40,6 +45,9 @@ export function PlayersPage() {
   const [searchInput, setSearchInput] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [createdPlayer, setCreatedPlayer] = useState<PlayerDetail | null>(null);
+  const [editingPlayer, setEditingPlayer] = useState<PlayerListItem | null>(
+    null,
+  );
   const queryFilters = Object.keys(filters).length > 0 ? filters : undefined;
   const players = usePlayers(page, queryFilters);
   const allPlayers = usePlayers(1);
@@ -217,7 +225,11 @@ export function PlayersPage() {
             </div>
           ) : (
             <>
-              <PlayerTable players={players.data.data} clubs={clubs.data} />
+              <PlayerTable
+                players={players.data.data}
+                clubs={clubs.data}
+                onEdit={setEditingPlayer}
+              />
               <PlayerPagination
                 meta={players.data.meta}
                 itemsOnPage={players.data.data.length}
@@ -256,6 +268,13 @@ export function PlayersPage() {
           <PlayerCreatedDialog
             player={createdPlayer}
             onClose={() => setCreatedPlayer(null)}
+          />
+        )}
+        {editingPlayer && (
+          <PlayerEditDialog
+            key={editingPlayer.id}
+            player={editingPlayer}
+            onClose={() => setEditingPlayer(null)}
           />
         )}
       </div>
