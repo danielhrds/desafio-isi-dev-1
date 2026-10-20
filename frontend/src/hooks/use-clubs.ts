@@ -4,8 +4,14 @@ import {
   useQueryClient,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import { createClub, listClubSummaries, listClubs } from '../services/clubs.js';
+import {
+  createClub,
+  getClubDetail,
+  listClubSummaries,
+  listClubs,
+} from '../services/clubs.js';
 import type {
+  ClubDetail,
   ClubListItem,
   ClubSort,
   ClubSummary,
@@ -23,6 +29,14 @@ export function useClubSummaries(sort: ClubSort) {
   return useQuery<ClubSummary[]>({
     queryKey: ['clubs', sort],
     queryFn: () => listClubSummaries(sort),
+  });
+}
+
+export function useClubDetail(id: number, enabled = true) {
+  return useQuery<ClubDetail>({
+    queryKey: ['club', id],
+    queryFn: () => getClubDetail(id),
+    enabled,
   });
 }
 

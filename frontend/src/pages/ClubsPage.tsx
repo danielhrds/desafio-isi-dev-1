@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import {
   ArrowDownUp,
+  ChevronRight,
   LoaderCircle,
   Plus,
   SearchX,
@@ -10,6 +11,7 @@ import {
   Shield,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 import { AppShell } from '@/components/layout/app-shell';
 import { ClubCreateDialog } from '@/components/clubs/club-create-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -58,17 +60,17 @@ function errorMessage(error: unknown): string {
 function ClubsTableSkeleton() {
   return (
     <div className="overflow-hidden rounded-xl border">
-      <div className="grid grid-cols-5 gap-4 border-b bg-muted-subtle px-4 py-3">
-        {Array.from({ length: 5 }, (_, index) => (
+      <div className="grid grid-cols-6 gap-4 border-b bg-muted-subtle px-4 py-3">
+        {Array.from({ length: 6 }, (_, index) => (
           <Skeleton key={index} className="h-4 w-20" />
         ))}
       </div>
       {Array.from({ length: 5 }, (_, row) => (
         <div
           key={row}
-          className="grid grid-cols-5 gap-4 border-b px-4 py-4 last:border-0"
+          className="grid grid-cols-6 gap-4 border-b px-4 py-4 last:border-0"
         >
-          {Array.from({ length: 5 }, (_, column) => (
+          {Array.from({ length: 6 }, (_, column) => (
             <Skeleton key={column} className="h-5 w-24" />
           ))}
         </div>
@@ -220,6 +222,9 @@ export function ClubsPage() {
                   <TableHead className="text-right">Caixa</TableHead>
                   <TableHead className="text-right">Valor do elenco</TableHead>
                   <TableHead className="text-right">Patrimônio</TableHead>
+                  <TableHead className="w-32">
+                    <span className="sr-only">Ações</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -245,18 +250,19 @@ export function ClubsPage() {
                     <TableCell className="text-right font-semibold tabular-nums">
                       {moneyFormatter.format(club.net_worth)}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link to={`/clubes/${club.id}`}>
+                          Ver clube
+                          <ChevronRight aria-hidden="true" />
+                        </Link>
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </section>
-        )}
-
-        {!clubs.isError && !clubs.isPending && clubs.data.length > 0 && (
-          <p className="mt-5 text-xs text-muted-foreground">
-            Clubes pelo nome ou pelo patrimônio; em caso de empate, a API ordena
-            pelo nome.
-          </p>
         )}
         {createOpen && (
           <ClubCreateDialog

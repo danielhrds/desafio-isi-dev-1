@@ -8,12 +8,14 @@ import {
 } from 'react-router-dom';
 import { PlayersPage } from './pages/PlayersPage.js';
 import { ClubsPage } from './pages/ClubsPage.js';
+import { ClubDetailPage } from './pages/ClubDetailPage.js';
 import { Toaster } from './components/ui/sonner.js';
 import './styles.css';
 
 const queryClient = new QueryClient();
 const router = createBrowserRouter([
   { path: '/jogadores', element: <PlayersPage /> },
+  { path: '/clubes/:clubId', element: <ClubDetailPage /> },
   { path: '/clubes', element: <ClubsPage /> },
   { path: '*', element: <Navigate to="/jogadores" replace /> },
 ]);

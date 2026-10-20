@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import {
   Breadcrumb,
   BreadcrumbItem,
+  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
@@ -42,6 +43,8 @@ interface AppShellProps {
   playerTotal?: number;
   activeSection: 'players' | 'clubs';
   breadcrumbPage: string;
+  breadcrumbParent?: { label: string; to: string };
+  activeClubId?: number;
   refreshLabel: string;
   isRefreshing: boolean;
   onRefresh: () => void;
@@ -65,6 +68,8 @@ export function AppShell({
   playerTotal,
   activeSection,
   breadcrumbPage,
+  breadcrumbParent,
+  activeClubId,
   refreshLabel,
   isRefreshing,
   onRefresh,
@@ -148,12 +153,18 @@ export function AppShell({
                 <SidebarMenu>
                   {clubs.map((club) => (
                     <SidebarMenuItem key={club.id}>
-                      <div className="flex h-8 items-center gap-2 rounded-md px-2 text-sm text-sidebar-foreground">
-                        <span className="flex size-5 shrink-0 items-center justify-center rounded border bg-muted text-[10px] font-semibold">
-                          {club.acronym[0]}
-                        </span>
-                        <span className="truncate">{club.name}</span>
-                      </div>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={activeClubId === club.id}
+                        tooltip={club.name}
+                      >
+                        <Link to={`/clubes/${club.id}`}>
+                          <span className="flex size-5 shrink-0 items-center justify-center rounded border bg-muted text-[10px] font-semibold">
+                            {club.acronym[0]}
+                          </span>
+                          <span className="truncate">{club.name}</span>
+                        </Link>
+                      </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
                 </SidebarMenu>
@@ -194,6 +205,20 @@ export function AppShell({
               <BreadcrumbSeparator>
                 <ChevronRight aria-hidden="true" />
               </BreadcrumbSeparator>
+              {breadcrumbParent && (
+                <>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink asChild>
+                      <Link to={breadcrumbParent.to}>
+                        {breadcrumbParent.label}
+                      </Link>
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator>
+                    <ChevronRight aria-hidden="true" />
+                  </BreadcrumbSeparator>
+                </>
+              )}
               <BreadcrumbItem>
                 <BreadcrumbPage>{breadcrumbPage}</BreadcrumbPage>
               </BreadcrumbItem>

@@ -255,21 +255,6 @@ export function PlayersPage() {
             </>
           )}
         </PlayerFilters>
-        <p className="mt-5 text-xs text-muted-foreground">
-          {filters.free === true
-            ? 'Com “Livres” ativo, o filtro por clube fica desabilitado porque essa combinação não é aceita.'
-            : filters.search
-              ? 'A busca procura o texto dentro do nome, sem diferenciar maiúsculas, minúsculas e acentos.'
-              : filters.min_age !== undefined ||
-                  filters.max_age !== undefined ||
-                  filters.min_value !== undefined ||
-                  filters.max_value !== undefined ||
-                  filters.condition !== undefined ||
-                  filters.position !== undefined ||
-                  filters.club_id !== undefined
-                ? 'Os filtros se combinam: a lista mostra só quem atende a todos. A faixa de valor usa o valor de mercado, nunca o valor base.'
-                : 'Overall e valor de mercado são calculados pela API a cada consulta.'}
-        </p>
         {createOpen && (
           <PlayerCreateDialog
             open={createOpen}
