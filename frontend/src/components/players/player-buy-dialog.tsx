@@ -1,10 +1,21 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
-import { CalendarDays, Clock3, Info, Shield, ShoppingCart } from 'lucide-react';
+import {
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
+  CircleAlert,
+  Info,
+  LoaderCircle,
+  Shield,
+  ShoppingCart,
+} from 'lucide-react';
 import { Controller, useForm } from 'react-hook-form';
+import { useState } from 'react';
 import { useClubSummaries } from '@/hooks/use-clubs';
+import { useBuyPlayer } from '@/hooks/use-market';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -16,6 +27,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import type { BuyPlayerResult } from '@/types/market';
 import {
   Select,
   SelectContent,
@@ -58,6 +70,38 @@ function initials(name: string): string {
   );
 }
 
+function describePurchaseError(error: unknown) {
+  if (axios.isAxiosError<{ message?: string }>(error) && error.response) {
+    const message = error.response.data?.message?.trim();
+
+    return {
+      title:
+        error.response.status === 409
+          ? 'Compra recusada'
+          : 'Não foi possível realizar a compra',
+      description:
+        message ||
+        'A solicitação foi recusada. Confira os dados e tente novamente.',
+      isNetworkError: false,
+    };
+  }
+
+  if (axios.isAxiosError(error)) {
+    return {
+      title: 'Sem conexão',
+      description:
+        'A compra não foi confirmada. Verifique a conexão e tente de novo.',
+      isNetworkError: true,
+    };
+  }
+
+  return {
+    title: 'Não foi possível realizar a compra',
+    description: 'Ocorreu um erro inesperado. Tente novamente.',
+    isNetworkError: false,
+  };
+}
+
 export function PlayerBuyDialog({
   player,
   onClose,
@@ -66,6 +110,13 @@ export function PlayerBuyDialog({
   onClose: () => void;
 }) {
   const clubsQuery = useClubSummaries('name');
+  const buyMutation = useBuyPlayer();
+  const [purchaseError, setPurchaseError] = useState<ReturnType<
+    typeof describePurchaseError
+  > | null>(null);
+  const [purchaseResult, setPurchaseResult] = useState<BuyPlayerResult | null>(
+    null,
+  );
   const clubs = clubsQuery.data ?? [];
   const form = useForm<PlayerBuyFormValues, unknown, PlayerBuyPayload>({
     resolver: zodResolver(playerBuySchema),
@@ -86,11 +137,28 @@ export function PlayerBuyDialog({
       'Verifique a conexão e tente novamente.')
     : 'Verifique a conexão e tente novamente.';
 
+  async function submitPurchase(input: PlayerBuyPayload) {
+    setPurchaseError(null);
+
+    try {
+      const result = await buyMutation.mutateAsync({
+        playerId: player.id,
+        input,
+      });
+      setPurchaseResult(result);
+    } catch (error) {
+      setPurchaseError(describePurchaseError(error));
+    }
+  }
+
+  const isSubmitting = buyMutation.isPending;
+  const isCompleted = purchaseResult !== null;
+
   return (
     <Dialog
       open
       onOpenChange={(open) => {
-        if (!open) onClose();
+        if (!open && !isSubmitting) onClose();
       }}
     >
       <DialogContent className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-5 sm:max-w-xl sm:p-6">
@@ -101,7 +169,45 @@ export function PlayerBuyDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5">
+        <form
+          className="space-y-5"
+          onSubmit={form.handleSubmit(submitPurchase)}
+        >
+          {isSubmitting && (
+            <Alert role="status" aria-live="polite">
+              <Info aria-hidden="true" />
+              <div>
+                <AlertTitle>Enviando a compra</AlertTitle>
+                <AlertDescription>
+                  Os controles ficam desabilitados até a resposta.
+                </AlertDescription>
+              </div>
+            </Alert>
+          )}
+
+          {purchaseError && (
+            <Alert variant="destructive">
+              <CircleAlert aria-hidden="true" />
+              <div>
+                <AlertTitle>{purchaseError.title}</AlertTitle>
+                <AlertDescription>{purchaseError.description}</AlertDescription>
+              </div>
+            </Alert>
+          )}
+
+          {purchaseResult && (
+            <Alert variant="success" role="status" aria-live="polite">
+              <CheckCircle2 aria-hidden="true" />
+              <div>
+                <AlertTitle>Compra concluída</AlertTitle>
+                <AlertDescription>
+                  {purchaseResult.player_name} agora faz parte do elenco de{' '}
+                  {selectedClub?.name ?? 'clube selecionado'}.
+                </AlertDescription>
+              </div>
+            </Alert>
+          )}
+
           <div className="flex items-center gap-3 rounded-lg border bg-muted-subtle p-3">
             <Avatar>
               <AvatarFallback
@@ -134,8 +240,13 @@ export function PlayerBuyDialog({
                 <>
                   <Select
                     value={field.value}
-                    onValueChange={field.onChange}
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      setPurchaseError(null);
+                    }}
                     disabled={
+                      isSubmitting ||
+                      isCompleted ||
                       clubsQuery.isPending ||
                       clubsQuery.isError ||
                       clubs.length === 0
@@ -228,13 +339,16 @@ export function PlayerBuyDialog({
                     id="buy-loyalty-date"
                     type="date"
                     className="pl-9"
+                    disabled={isSubmitting || isCompleted}
                     aria-invalid={Boolean(form.formState.errors.loyalty_date)}
                     aria-describedby={
                       form.formState.errors.loyalty_date
                         ? 'buy-loyalty-date-error'
                         : undefined
                     }
-                    {...form.register('loyalty_date')}
+                    {...form.register('loyalty_date', {
+                      onChange: () => setPurchaseError(null),
+                    })}
                   />
                 </div>
                 {form.formState.errors.loyalty_date && (
@@ -258,6 +372,7 @@ export function PlayerBuyDialog({
                     type="time"
                     step={60}
                     className="pl-9"
+                    disabled={isSubmitting || isCompleted}
                     aria-label="Horário do fim da fidelidade"
                     aria-invalid={Boolean(form.formState.errors.loyalty_time)}
                     aria-describedby={
@@ -265,7 +380,9 @@ export function PlayerBuyDialog({
                         ? 'buy-loyalty-time-error'
                         : undefined
                     }
-                    {...form.register('loyalty_time')}
+                    {...form.register('loyalty_time', {
+                      onChange: () => setPurchaseError(null),
+                    })}
                   />
                 </div>
                 {form.formState.errors.loyalty_time && (
@@ -298,16 +415,36 @@ export function PlayerBuyDialog({
               type="button"
               variant="outline"
               className="w-full sm:w-auto"
+              disabled={isSubmitting}
               onClick={onClose}
             >
-              Cancelar
+              {isCompleted ? 'Fechar' : 'Cancelar'}
             </Button>
-            <Button type="button" className="w-full sm:w-auto" disabled>
-              <ShoppingCart aria-hidden="true" />
-              Confirmar compra
-            </Button>
+            {!isCompleted && (
+              <Button
+                type="submit"
+                className="w-full sm:w-auto"
+                disabled={
+                  isSubmitting ||
+                  clubsQuery.isPending ||
+                  clubsQuery.isError ||
+                  clubs.length === 0
+                }
+              >
+                {isSubmitting ? (
+                  <LoaderCircle aria-hidden="true" className="animate-spin" />
+                ) : (
+                  <ShoppingCart aria-hidden="true" />
+                )}
+                {isSubmitting
+                  ? 'Comprando…'
+                  : purchaseError?.isNetworkError
+                    ? 'Tentar de novo'
+                    : 'Confirmar compra'}
+              </Button>
+            )}
           </DialogFooter>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
