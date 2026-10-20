@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { MoreHorizontal, Pencil } from 'lucide-react';
+import { Eye, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import type { ClubListItem } from '@/types/club';
 import type {
   PlayerCondition,
@@ -102,11 +102,15 @@ function tableHeader() {
 export function PlayerTable({
   players,
   clubs,
+  onView,
   onEdit,
+  onDelete,
 }: {
   players: PlayerListItem[];
   clubs: ClubListItem[];
+  onView: (player: PlayerListItem) => void;
   onEdit: (player: PlayerListItem) => void;
+  onDelete: (player: PlayerListItem) => void;
 }) {
   const clubById = new Map(clubs.map((club) => [club.id, club]));
 
@@ -225,10 +229,26 @@ export function PlayerTable({
                       {player.name}
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => onView(player)}>
+                      <Eye aria-hidden="true" />
+                      Ver detalhes
+                    </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => onEdit(player)}>
                       <Pencil aria-hidden="true" />
                       Editar
                     </DropdownMenuItem>
+                    {player.club_id === null && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onSelect={() => onDelete(player)}
+                        >
+                          <Trash2 aria-hidden="true" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>

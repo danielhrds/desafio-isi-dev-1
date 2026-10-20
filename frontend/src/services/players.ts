@@ -21,6 +21,11 @@ export async function listPlayers(
   return response.data;
 }
 
+export async function getPlayer(id: number): Promise<PlayerDetail> {
+  const response = await apiClient.get<PlayerDetail>(`/players/${id}`);
+  return response.data;
+}
+
 export async function createPlayer(
   input: CreatePlayerInput,
 ): Promise<PlayerDetail> {
@@ -34,4 +39,8 @@ export async function updatePlayer(
 ): Promise<PlayerDetail> {
   const response = await apiClient.put<PlayerDetail>(`/players/${id}`, input);
   return response.data;
+}
+
+export async function deletePlayer(id: number): Promise<void> {
+  await apiClient.delete(`/players/${id}`);
 }

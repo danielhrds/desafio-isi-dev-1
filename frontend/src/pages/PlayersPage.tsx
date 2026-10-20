@@ -10,6 +10,8 @@ import {
   X,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
+import { PlayerDeleteDialog } from '@/components/players/player-delete-dialog';
+import { PlayerDetailsDialog } from '@/components/players/player-details-dialog';
 import { PlayerEditDialog } from '@/components/players/player-edit-dialog';
 import { PlayerCreateDialog } from '@/components/players/player-create-dialog';
 import { PlayerCreatedDialog } from '@/components/players/player-created-dialog';
@@ -46,6 +48,12 @@ export function PlayersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [createdPlayer, setCreatedPlayer] = useState<PlayerDetail | null>(null);
   const [editingPlayer, setEditingPlayer] = useState<PlayerListItem | null>(
+    null,
+  );
+  const [viewingPlayer, setViewingPlayer] = useState<PlayerListItem | null>(
+    null,
+  );
+  const [deletingPlayer, setDeletingPlayer] = useState<PlayerListItem | null>(
     null,
   );
   const queryFilters = Object.keys(filters).length > 0 ? filters : undefined;
@@ -228,7 +236,9 @@ export function PlayersPage() {
               <PlayerTable
                 players={players.data.data}
                 clubs={clubs.data}
+                onView={setViewingPlayer}
                 onEdit={setEditingPlayer}
+                onDelete={setDeletingPlayer}
               />
               <PlayerPagination
                 meta={players.data.meta}
@@ -275,6 +285,20 @@ export function PlayersPage() {
             key={editingPlayer.id}
             player={editingPlayer}
             onClose={() => setEditingPlayer(null)}
+          />
+        )}
+        {viewingPlayer && (
+          <PlayerDetailsDialog
+            player={viewingPlayer}
+            clubs={clubs.data ?? []}
+            onClose={() => setViewingPlayer(null)}
+          />
+        )}
+        {deletingPlayer && (
+          <PlayerDeleteDialog
+            player={deletingPlayer}
+            onClose={() => setDeletingPlayer(null)}
+            onDeleted={() => setDeletingPlayer(null)}
           />
         )}
       </div>
