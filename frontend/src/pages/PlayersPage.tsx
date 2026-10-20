@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PlayerConditionDialog } from '@/components/players/player-condition-dialog';
+import { PlayerBuyDialog } from '@/components/players/player-buy-dialog';
 import { PlayerDeleteDialog } from '@/components/players/player-delete-dialog';
 import { PlayerDetailsDialog } from '@/components/players/player-details-dialog';
 import { PlayerEditDialog } from '@/components/players/player-edit-dialog';
@@ -59,6 +60,7 @@ export function PlayersPage() {
   );
   const [changingConditionPlayer, setChangingConditionPlayer] =
     useState<PlayerListItem | null>(null);
+  const [buyingPlayer, setBuyingPlayer] = useState<PlayerListItem | null>(null);
   const queryFilters = Object.keys(filters).length > 0 ? filters : undefined;
   const players = usePlayers(page, queryFilters);
   const allPlayers = usePlayers(1);
@@ -246,6 +248,7 @@ export function PlayersPage() {
                 onEdit={setEditingPlayer}
                 onChangeCondition={setChangingConditionPlayer}
                 onDelete={setDeletingPlayer}
+                onBuy={setBuyingPlayer}
               />
               <PlayerPagination
                 meta={players.data.meta}
@@ -298,6 +301,12 @@ export function PlayersPage() {
             key={changingConditionPlayer.id}
             player={changingConditionPlayer}
             onClose={() => setChangingConditionPlayer(null)}
+          />
+        )}
+        {buyingPlayer && (
+          <PlayerBuyDialog
+            player={buyingPlayer}
+            onClose={() => setBuyingPlayer(null)}
           />
         )}
       </div>

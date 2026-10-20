@@ -25,14 +25,14 @@ import type {
 
 export function useClubs(): UseQueryResult<ClubListItem[], Error> {
   return useQuery({
-    queryKey: ['clubs', 'name'],
+    queryKey: ['clubs', 'list'],
     queryFn: listClubs,
   });
 }
 
 export function useClubSummaries(sort: ClubSort) {
   return useQuery<ClubSummary[]>({
-    queryKey: ['clubs', sort],
+    queryKey: ['clubs', 'summary', sort],
     queryFn: () => listClubSummaries(sort),
   });
 }

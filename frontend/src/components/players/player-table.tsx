@@ -19,7 +19,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Eye, HeartPulse, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import {
+  Eye,
+  HeartPulse,
+  MoreHorizontal,
+  Pencil,
+  ShoppingCart,
+  Trash2,
+} from 'lucide-react';
 import type { ClubListItem } from '@/types/club';
 import type {
   PlayerCondition,
@@ -106,6 +113,7 @@ export function PlayerTable({
   onEdit,
   onChangeCondition,
   onDelete,
+  onBuy,
 }: {
   players: PlayerListItem[];
   clubs: ClubListItem[];
@@ -113,6 +121,7 @@ export function PlayerTable({
   onEdit: (player: PlayerListItem) => void;
   onChangeCondition: (player: PlayerListItem) => void;
   onDelete: (player: PlayerListItem) => void;
+  onBuy: (player: PlayerListItem) => void;
 }) {
   const clubById = new Map(clubs.map((club) => [club.id, club]));
 
@@ -215,50 +224,63 @@ export function PlayerTable({
                 )}
               </TableCell>
               <TableCell className="w-10 pr-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                <div className="flex items-center justify-end gap-1">
+                  {player.club_id === null && (
                     <Button
                       type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`Abrir ações de ${player.name}`}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onBuy(player)}
                     >
-                      <MoreHorizontal aria-hidden="true" />
+                      <ShoppingCart aria-hidden="true" />
+                      Comprar
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel className="truncate font-normal text-muted-foreground">
-                      {player.name}
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={() => onView(player)}>
-                      <Eye aria-hidden="true" />
-                      Ver detalhes
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => onEdit(player)}>
-                      <Pencil aria-hidden="true" />
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => onChangeCondition(player)}
-                    >
-                      <HeartPulse aria-hidden="true" />
-                      Alterar condição
-                    </DropdownMenuItem>
-                    {player.club_id === null && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onSelect={() => onDelete(player)}
-                        >
-                          <Trash2 aria-hidden="true" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Abrir ações de ${player.name}`}
+                      >
+                        <MoreHorizontal aria-hidden="true" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel className="truncate font-normal text-muted-foreground">
+                        {player.name}
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onSelect={() => onView(player)}>
+                        <Eye aria-hidden="true" />
+                        Ver detalhes
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => onEdit(player)}>
+                        <Pencil aria-hidden="true" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => onChangeCondition(player)}
+                      >
+                        <HeartPulse aria-hidden="true" />
+                        Alterar condição
+                      </DropdownMenuItem>
+                      {player.club_id === null && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onSelect={() => onDelete(player)}
+                          >
+                            <Trash2 aria-hidden="true" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </TableCell>
             </TableRow>
           );
