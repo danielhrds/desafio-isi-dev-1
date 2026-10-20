@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Eye, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Eye, HeartPulse, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import type { ClubListItem } from '@/types/club';
 import type {
   PlayerCondition,
@@ -104,12 +104,14 @@ export function PlayerTable({
   clubs,
   onView,
   onEdit,
+  onChangeCondition,
   onDelete,
 }: {
   players: PlayerListItem[];
   clubs: ClubListItem[];
   onView: (player: PlayerListItem) => void;
   onEdit: (player: PlayerListItem) => void;
+  onChangeCondition: (player: PlayerListItem) => void;
   onDelete: (player: PlayerListItem) => void;
 }) {
   const clubById = new Map(clubs.map((club) => [club.id, club]));
@@ -236,6 +238,12 @@ export function PlayerTable({
                     <DropdownMenuItem onSelect={() => onEdit(player)}>
                       <Pencil aria-hidden="true" />
                       Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => onChangeCondition(player)}
+                    >
+                      <HeartPulse aria-hidden="true" />
+                      Alterar condição
                     </DropdownMenuItem>
                     {player.club_id === null && (
                       <>

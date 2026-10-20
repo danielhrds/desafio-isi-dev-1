@@ -5,13 +5,18 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import {
+  changePlayerCondition,
   createPlayer,
   deletePlayer,
   getPlayer,
   listPlayers,
   updatePlayer,
 } from '../services/players.js';
-import type { PlayerListFilters, UpdatePlayerInput } from '../types/player.js';
+import type {
+  PlayerCondition,
+  PlayerListFilters,
+  UpdatePlayerInput,
+} from '../types/player.js';
 
 export function usePlayers(page: number, filters?: PlayerListFilters) {
   return useQuery({
@@ -77,6 +82,29 @@ export function useUpdatePlayer() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['players'] }),
         queryClient.invalidateQueries({ queryKey: ['player'] }),
+        queryClient.invalidateQueries({ queryKey: ['player-count'] }),
+        queryClient.invalidateQueries({ queryKey: ['clubs'] }),
+      ]);
+    },
+  });
+}
+
+export function useUpdatePlayerCondition() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      condition,
+    }: {
+      id: number;
+      condition: PlayerCondition;
+    }) => changePlayerCondition(id, condition),
+    onSuccess: async (player, { id }) => {
+      queryClient.setQueryData(['player', id], player);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['players'] }),
+        queryClient.invalidateQueries({ queryKey: ['player', id] }),
         queryClient.invalidateQueries({ queryKey: ['player-count'] }),
         queryClient.invalidateQueries({ queryKey: ['clubs'] }),
       ]);

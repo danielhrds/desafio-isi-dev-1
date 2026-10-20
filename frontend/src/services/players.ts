@@ -1,6 +1,7 @@
 import { apiClient } from './api-client.js';
 import type {
   CreatePlayerInput,
+  PlayerCondition,
   PlayerDetail,
   PlayerListFilters,
   PlayerListResponse,
@@ -38,6 +39,17 @@ export async function updatePlayer(
   input: UpdatePlayerInput,
 ): Promise<PlayerDetail> {
   const response = await apiClient.put<PlayerDetail>(`/players/${id}`, input);
+  return response.data;
+}
+
+export async function changePlayerCondition(
+  id: number,
+  condition: PlayerCondition,
+): Promise<PlayerDetail> {
+  const response = await apiClient.patch<PlayerDetail>(
+    `/players/${id}/condition`,
+    { condition },
+  );
   return response.data;
 }
 
