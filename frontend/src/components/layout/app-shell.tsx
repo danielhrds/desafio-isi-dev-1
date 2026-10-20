@@ -40,6 +40,9 @@ interface AppShellProps {
   children: ReactNode;
   clubs: ClubListItem[];
   playerTotal?: number;
+  activeSection: 'players' | 'clubs';
+  breadcrumbPage: string;
+  refreshLabel: string;
   isRefreshing: boolean;
   onRefresh: () => void;
 }
@@ -60,6 +63,9 @@ export function AppShell({
   children,
   clubs,
   playerTotal,
+  activeSection,
+  breadcrumbPage,
+  refreshLabel,
   isRefreshing,
   onRefresh,
 }: AppShellProps) {
@@ -84,7 +90,11 @@ export function AppShell({
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive tooltip="Jogadores">
+                  <SidebarMenuButton
+                    asChild
+                    isActive={activeSection === 'players'}
+                    tooltip="Jogadores"
+                  >
                     <Link to="/jogadores">
                       <UsersRound aria-hidden="true" />
                       <span>Jogadores</span>
@@ -95,13 +105,17 @@ export function AppShell({
                   )}
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <div className="flex h-8 items-center gap-2 rounded-md px-2 text-sm text-sidebar-foreground">
-                    <Shield aria-hidden="true" className="size-4" />
-                    <span>Clubes</span>
-                    <span className="ml-auto tabular-nums text-muted-foreground">
-                      {clubs.length}
-                    </span>
-                  </div>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={activeSection === 'clubs'}
+                    tooltip="Clubes"
+                  >
+                    <Link to="/clubes">
+                      <Shield aria-hidden="true" />
+                      <span>Clubes</span>
+                    </Link>
+                  </SidebarMenuButton>
+                  <SidebarMenuBadge>{clubs.length}</SidebarMenuBadge>
                 </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
@@ -181,7 +195,7 @@ export function AppShell({
                 <ChevronRight aria-hidden="true" />
               </BreadcrumbSeparator>
               <BreadcrumbItem>
-                <BreadcrumbPage>Jogadores</BreadcrumbPage>
+                <BreadcrumbPage>{breadcrumbPage}</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
@@ -190,7 +204,7 @@ export function AppShell({
             variant="ghost"
             size="icon"
             className="ml-auto"
-            aria-label="Atualizar jogadores"
+            aria-label={refreshLabel}
             disabled={isRefreshing}
             onClick={onRefresh}
           >

@@ -109,6 +109,9 @@ export function PlayersPage() {
     <AppShell
       clubs={clubs.data ?? []}
       playerTotal={allPlayers.data?.meta.total_items}
+      activeSection="players"
+      breadcrumbPage="Jogadores"
+      refreshLabel="Atualizar jogadores"
       isRefreshing={
         players.isFetching || allPlayers.isFetching || clubs.isFetching
       }

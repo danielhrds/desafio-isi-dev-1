@@ -7,11 +7,13 @@ import {
   createBrowserRouter,
 } from 'react-router-dom';
 import { PlayersPage } from './pages/PlayersPage.js';
+import { ClubsPage } from './pages/ClubsPage.js';
 import './styles.css';
 
 const queryClient = new QueryClient();
 const router = createBrowserRouter([
   { path: '/jogadores', element: <PlayersPage /> },
+  { path: '/clubes', element: <ClubsPage /> },
   { path: '*', element: <Navigate to="/jogadores" replace /> },
 ]);
 
