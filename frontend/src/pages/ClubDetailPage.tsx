@@ -7,6 +7,7 @@ import {
   SearchX,
   ServerOff,
   Shirt,
+  ShoppingCart,
   WalletCards,
   type LucideIcon,
 } from 'lucide-react';
@@ -442,6 +443,12 @@ export function ClubDetailPage() {
                   </div>
                 </div>
               </div>
+              <Button asChild className="shrink-0 self-start">
+                <Link to="/jogadores">
+                  <ShoppingCart aria-hidden="true" />
+                  Comprar jogadores
+                </Link>
+              </Button>
             </div>
 
             <section
