@@ -9,6 +9,8 @@ import {
 import { PlayersPage } from './pages/PlayersPage.js';
 import { ClubsPage } from './pages/ClubsPage.js';
 import { ClubDetailPage } from './pages/ClubDetailPage.js';
+import { MatchesPage } from './pages/MatchesPage.js';
+import { MatchDetailPage } from './pages/MatchDetailPage.js';
 import { Toaster } from './components/ui/sonner.js';
 import './styles.css';
 
@@ -17,6 +19,8 @@ const router = createBrowserRouter([
   { path: '/jogadores', element: <PlayersPage /> },
   { path: '/clubes/:clubId', element: <ClubDetailPage /> },
   { path: '/clubes', element: <ClubsPage /> },
+  { path: '/partidas/:matchId', element: <MatchDetailPage /> },
+  { path: '/partidas', element: <MatchesPage /> },
   { path: '*', element: <Navigate to="/jogadores" replace /> },
 ]);
 

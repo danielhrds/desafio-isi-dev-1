@@ -36,12 +36,15 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import type { ClubListItem } from '@/types/club';
+import type { MatchSummary } from '@/types/match';
 
 interface AppShellProps {
   children: ReactNode;
   clubs: ClubListItem[];
   playerTotal?: number;
-  activeSection: 'players' | 'clubs';
+  matchCount?: number;
+  latestMatch?: MatchSummary;
+  activeSection: 'players' | 'clubs' | 'matches';
   breadcrumbPage: string;
   breadcrumbParent?: { label: string; to: string };
   activeClubId?: number;
@@ -66,6 +69,8 @@ export function AppShell({
   children,
   clubs,
   playerTotal,
+  matchCount,
+  latestMatch,
   activeSection,
   breadcrumbPage,
   breadcrumbParent,
@@ -131,10 +136,19 @@ export function AppShell({
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <div className="flex h-8 items-center gap-2 rounded-md px-2 text-sm text-sidebar-foreground">
-                    <Swords aria-hidden="true" className="size-4" />
-                    <span>Partidas</span>
-                  </div>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={activeSection === 'matches'}
+                    tooltip="Partidas"
+                  >
+                    <Link to="/partidas">
+                      <Swords aria-hidden="true" />
+                      <span>Partidas</span>
+                    </Link>
+                  </SidebarMenuButton>
+                  {matchCount !== undefined && (
+                    <SidebarMenuBadge>{matchCount}</SidebarMenuBadge>
+                  )}
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <div className="flex h-8 items-center gap-2 rounded-md px-2 text-sm text-sidebar-foreground">
@@ -187,6 +201,26 @@ export function AppShell({
                 </p>
               </div>
             </div>
+            {latestMatch && (
+              <Link
+                to={`/partidas/${latestMatch.id}`}
+                className="mt-3 flex items-start gap-2 border-t pt-2 text-xs hover:text-foreground"
+              >
+                <Swords
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                />
+                <span className="min-w-0">
+                  <span className="block font-semibold text-foreground">
+                    Última partida
+                  </span>
+                  <span className="block truncate text-muted-foreground">
+                    {latestMatch.home.club_name} {latestMatch.home.goals} ×{' '}
+                    {latestMatch.away.goals} {latestMatch.away.club_name}
+                  </span>
+                </span>
+              </Link>
+            )}
             <div className="mt-3 flex items-center gap-2 border-t pt-2 text-muted-foreground">
               <Clock3 aria-hidden="true" className="size-4" />
               Horário de Brasília (UTC−3)
@@ -201,7 +235,9 @@ export function AppShell({
           <span aria-hidden="true" className="h-5 w-px bg-border" />
           <Breadcrumb>
             <BreadcrumbList>
-              <BreadcrumbItem>Mercado</BreadcrumbItem>
+              <BreadcrumbItem>
+                {activeSection === 'matches' ? 'Liga' : 'Mercado'}
+              </BreadcrumbItem>
               <BreadcrumbSeparator>
                 <ChevronRight aria-hidden="true" />
               </BreadcrumbSeparator>
