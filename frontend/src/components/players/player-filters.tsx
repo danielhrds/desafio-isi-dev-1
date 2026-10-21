@@ -477,12 +477,12 @@ export function PlayerFilters({
                   ? 'free'
                   : 'assigned'
             }
-            onValueChange={(value) =>
+            onValueChange={(value) => {
+              if (value === 'free' && filters.club_id !== undefined) return;
               onChange({
                 free: value === 'all' ? undefined : value === 'free',
-                ...(value === 'free' ? { club_id: undefined } : {}),
-              })
-            }
+              });
+            }}
           >
             <TabsList className="h-9 w-full sm:w-auto">
               <TabsTrigger value="all">
@@ -491,12 +491,32 @@ export function PlayerFilters({
                   {counts.all ?? '—'}
                 </span>
               </TabsTrigger>
-              <TabsTrigger value="free">
-                Livres{' '}
-                <span className="ml-1 tabular-nums text-muted-foreground">
-                  {counts.free ?? '—'}
-                </span>
-              </TabsTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    tabIndex={filters.club_id !== undefined ? 0 : -1}
+                    className="inline-flex h-full flex-1"
+                  >
+                    <TabsTrigger
+                      value="free"
+                      disabled={filters.club_id !== undefined}
+                      className="w-full"
+                    >
+                      Livres
+                      {filters.club_id === undefined && (
+                        <span className="ml-1 tabular-nums text-muted-foreground">
+                          {counts.free ?? '—'}
+                        </span>
+                      )}
+                    </TabsTrigger>
+                  </span>
+                </TooltipTrigger>
+                {filters.club_id !== undefined && (
+                  <TooltipContent>
+                    “Livres” não combina com o filtro por clube.
+                  </TooltipContent>
+                )}
+              </Tooltip>
               <TabsTrigger value="assigned">
                 Em clubes{' '}
                 <span className="ml-1 tabular-nums text-muted-foreground">
