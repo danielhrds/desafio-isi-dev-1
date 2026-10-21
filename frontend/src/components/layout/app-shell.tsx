@@ -44,7 +44,7 @@ interface AppShellProps {
   playerTotal?: number;
   matchCount?: number;
   latestMatch?: MatchSummary;
-  activeSection: 'players' | 'clubs' | 'matches';
+  activeSection: 'players' | 'clubs' | 'matches' | 'standings';
   breadcrumbPage: string;
   breadcrumbParent?: { label: string; to: string };
   activeClubId?: number;
@@ -151,10 +151,16 @@ export function AppShell({
                   )}
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <div className="flex h-8 items-center gap-2 rounded-md px-2 text-sm text-sidebar-foreground">
-                    <ListOrdered aria-hidden="true" className="size-4" />
-                    <span>Classificação</span>
-                  </div>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={activeSection === 'standings'}
+                    tooltip="Classificação"
+                  >
+                    <Link to="/classificacao">
+                      <ListOrdered aria-hidden="true" />
+                      <span>Classificação</span>
+                    </Link>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
@@ -236,7 +242,9 @@ export function AppShell({
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem>
-                {activeSection === 'matches' ? 'Liga' : 'Mercado'}
+                {activeSection === 'matches' || activeSection === 'standings'
+                  ? 'Liga'
+                  : 'Mercado'}
               </BreadcrumbItem>
               <BreadcrumbSeparator>
                 <ChevronRight aria-hidden="true" />
