@@ -642,14 +642,6 @@ export function ClubTransactionHistory({ clubId }: { clubId: number }) {
           </div>
         ) : null}
       </Card>
-
-      <p className="px-1 text-xs text-muted-foreground">
-        {filterRejected
-          ? 'Os filtros foram mantidos. Ajuste-os ou limpe-os para consultar novamente.'
-          : transactions.data?.data.length === 0
-            ? 'Sem transações, os totais ficam zerados. Exportar CSV baixa a linha de cabeçalho.'
-            : 'O resumo e a exportação respeitam os filtros aplicados.'}
-      </p>
     </div>
   );
 }
