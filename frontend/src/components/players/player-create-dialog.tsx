@@ -10,6 +10,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { useForm, useWatch } from 'react-hook-form';
+import { FieldError } from '@/components/form-field-error';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -61,19 +62,6 @@ type NumericField =
   | 'defending'
   | 'physical'
   | 'potential';
-
-function FieldError({ id, message }: { id: string; message?: string }) {
-  if (!message) return null;
-  return (
-    <p
-      id={id}
-      className="mt-1.5 flex items-start gap-1 text-xs text-destructive"
-    >
-      <CircleAlert aria-hidden="true" className="mt-px size-3.5 shrink-0" />
-      {message}
-    </p>
-  );
-}
 
 function CalculatedField({
   label,

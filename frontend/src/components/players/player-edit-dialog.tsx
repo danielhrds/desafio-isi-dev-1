@@ -7,8 +7,9 @@ import {
   LoaderCircle,
   UserRound,
 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { toast } from 'sonner';
+import { FieldError } from '@/components/form-field-error';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,19 +43,6 @@ const moneyFormatter = new Intl.NumberFormat('pt-BR', {
   maximumFractionDigits: 2,
 });
 
-function FieldError({ id, message }: { id: string; message?: string }) {
-  if (!message) return null;
-  return (
-    <p
-      id={id}
-      className="mt-1.5 flex items-start gap-1 text-xs text-destructive"
-    >
-      <CircleAlert aria-hidden="true" className="mt-px size-3.5 shrink-0" />
-      {message}
-    </p>
-  );
-}
-
 export function PlayerEditDialog({
   player,
   onClose,
@@ -66,6 +54,7 @@ export function PlayerEditDialog({
   const [serverError, setServerError] = useState<string | null>(null);
   const schema = useMemo(() => createPlayerEditSchema(player), [player]);
   const {
+    control,
     register,
     setValue,
     handleSubmit,
@@ -79,6 +68,7 @@ export function PlayerEditDialog({
       agility: player.agility,
     },
   });
+  const selectedPosition = useWatch({ control, name: 'position' });
   const saving = isSubmitting || updatePlayer.isPending;
   const isAssigned = player.club_id !== null;
 
@@ -176,7 +166,7 @@ export function PlayerEditDialog({
                   key={position.value}
                   type="button"
                   variant="outline"
-                  aria-pressed={player.position === position.value}
+                  aria-pressed={selectedPosition === position.value}
                   disabled={
                     saving || (isAssigned && position.value !== player.position)
                   }

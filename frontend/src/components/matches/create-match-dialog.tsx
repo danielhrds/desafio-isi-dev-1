@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { CircleAlert, Info, LoaderCircle, Swords } from 'lucide-react';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
+import { FieldError } from '@/components/form-field-error';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -32,20 +33,6 @@ import {
   type CreateMatchPayload,
 } from './create-match-schema';
 import type { ClubListItem } from '@/types/club';
-
-function FieldError({ id, message }: { id: string; message?: string }) {
-  if (!message) return null;
-
-  return (
-    <p
-      id={id}
-      className="mt-1.5 flex items-start gap-1 text-xs text-destructive"
-    >
-      <CircleAlert aria-hidden="true" className="mt-px size-3.5 shrink-0" />
-      {message}
-    </p>
-  );
-}
 
 export function CreateMatchDialog({
   open,
@@ -173,8 +160,14 @@ export function CreateMatchDialog({
                     onValueChange={(value) => {
                       field.onChange(value);
                       clearRequestError();
+                      void form.trigger();
                     }}
-                    onOpenChange={(isOpen) => !isOpen && field.onBlur()}
+                    onOpenChange={(isOpen) => {
+                      if (!isOpen) {
+                        field.onBlur();
+                        void form.trigger();
+                      }
+                    }}
                     disabled={!canSelectClubs || saving}
                   >
                     <SelectTrigger
@@ -230,8 +223,14 @@ export function CreateMatchDialog({
                     onValueChange={(value) => {
                       field.onChange(value);
                       clearRequestError();
+                      void form.trigger();
                     }}
-                    onOpenChange={(isOpen) => !isOpen && field.onBlur()}
+                    onOpenChange={(isOpen) => {
+                      if (!isOpen) {
+                        field.onBlur();
+                        void form.trigger();
+                      }
+                    }}
                     disabled={!canSelectClubs || saving}
                   >
                     <SelectTrigger

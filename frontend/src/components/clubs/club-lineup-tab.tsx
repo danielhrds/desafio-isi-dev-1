@@ -273,6 +273,7 @@ export function ClubLineupTab({
     handleSubmit,
     reset,
     setValue,
+    trigger,
     formState: { errors, isSubmitting },
   } = useForm<ClubLineupFormValues>({
     resolver: zodResolver(clubLineupSchema),
@@ -326,6 +327,7 @@ export function ClubLineupTab({
       shouldDirty: true,
       shouldValidate: true,
     });
+    void trigger();
   }
 
   async function submit(values: ClubLineupFormValues) {
@@ -535,6 +537,7 @@ export function ClubLineupTab({
                                       onValueChange={(value) => {
                                         setServerError(null);
                                         field.onChange(Number(value));
+                                        void trigger();
                                       }}
                                       disabled={
                                         saving || availablePlayers.length === 0

@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
 import { CircleAlert, LoaderCircle, Shield, WalletCards } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { FieldError } from '@/components/form-field-error';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,20 +28,6 @@ const moneyFormatter = new Intl.NumberFormat('pt-BR', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
-
-function FieldError({ id, message }: { id: string; message?: string }) {
-  if (!message) return null;
-
-  return (
-    <p
-      id={id}
-      className="mt-1.5 flex items-start gap-1 text-xs text-destructive"
-    >
-      <CircleAlert aria-hidden="true" className="mt-px size-3.5 shrink-0" />
-      {message}
-    </p>
-  );
-}
 
 function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError<{ message?: string }>(error)) {

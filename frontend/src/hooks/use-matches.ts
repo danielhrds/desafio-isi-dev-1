@@ -25,6 +25,7 @@ export function useCreateMatch() {
     onSuccess: (match) => {
       queryClient.setQueryData(['match', match.id], match);
       void queryClient.invalidateQueries({ queryKey: ['matches'] });
+      void queryClient.invalidateQueries({ queryKey: ['standings'] });
     },
   });
 }

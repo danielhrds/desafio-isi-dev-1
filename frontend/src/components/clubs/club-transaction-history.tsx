@@ -473,11 +473,7 @@ export function ClubTransactionHistory({ clubId }: { clubId: number }) {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('all');
 
   const typeFilter: ClubTransactionFilters['type'] =
-    selectedTypes.length === 0
-      ? undefined
-      : selectedTypes.length === 2
-        ? 'COMPRA,VENDA'
-        : selectedTypes[0];
+    selectedTypes.length === 2 ? 'COMPRA,VENDA' : selectedTypes[0];
   const playerIdFilter =
     selectedPlayerId === 'all' ? undefined : Number(selectedPlayerId);
   const filters: ClubTransactionFilters = {
@@ -510,7 +506,9 @@ export function ClubTransactionHistory({ clubId }: { clubId: number }) {
   function toggleType(type: TransactionType) {
     setSelectedTypes((current) =>
       current.includes(type)
-        ? current.filter((selectedType) => selectedType !== type)
+        ? current.length === 1
+          ? current
+          : current.filter((selectedType) => selectedType !== type)
         : [...current, type],
     );
   }
