@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 import {
   ArrowDownUp,
   ChevronRight,
@@ -35,6 +34,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useClubSummaries, useClubs } from '@/hooks/use-clubs';
 import { usePlayers } from '@/hooks/use-players';
+import { apiErrorMessage } from '@/lib/api-error';
 import type { ClubSort } from '@/types/club';
 
 const moneyFormatter = new Intl.NumberFormat('pt-BR', {
@@ -47,15 +47,6 @@ const sortLabels: Record<ClubSort, string> = {
   net_worth_desc: 'Ordenar: patrimônio (maior para o menor)',
   net_worth_asc: 'Ordenar: patrimônio (menor para o maior)',
 };
-
-function errorMessage(error: unknown): string {
-  if (axios.isAxiosError<{ message?: string }>(error)) {
-    return (
-      error.response?.data?.message ?? 'Verifique a conexão e tente novamente.'
-    );
-  }
-  return 'Verifique a conexão e tente novamente.';
-}
 
 function ClubsTableSkeleton() {
   return (
@@ -133,7 +124,7 @@ export function ClubsPage() {
               Não foi possível carregar os clubes
             </AlertTitle>
             <AlertDescription className="block max-w-sm">
-              {errorMessage(clubs.error)}
+              {apiErrorMessage(clubs.error)}
             </AlertDescription>
             <Button
               type="button"

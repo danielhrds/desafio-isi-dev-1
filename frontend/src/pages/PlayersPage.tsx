@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 import {
   LoaderCircle,
   Plus,
@@ -27,20 +26,12 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { useClubs } from '@/hooks/use-clubs';
 import { usePlayerCounts, usePlayers } from '@/hooks/use-players';
+import { apiErrorMessage } from '@/lib/api-error';
 import type {
   PlayerDetail,
   PlayerListFilters,
   PlayerListItem,
 } from '@/types/player';
-
-function errorMessage(error: unknown): string {
-  if (axios.isAxiosError<{ message?: string }>(error)) {
-    return (
-      error.response?.data?.message ?? 'Verifique a conexão e tente novamente.'
-    );
-  }
-  return 'Verifique a conexão e tente novamente.';
-}
 
 export function PlayersPage() {
   const queryClient = useQueryClient();
@@ -181,7 +172,7 @@ export function PlayersPage() {
                 Não foi possível carregar os jogadores
               </AlertTitle>
               <AlertDescription className="block max-w-sm text-muted-foreground">
-                {errorMessage(players.error ?? clubs.error)}
+                {apiErrorMessage(players.error ?? clubs.error)}
               </AlertDescription>
               <Button
                 type="button"
