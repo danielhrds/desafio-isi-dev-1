@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ClipboardList,
   Coins,
+  History,
   Landmark,
   SearchX,
   ServerOff,
@@ -37,8 +38,10 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ClubLineupTab } from '@/components/clubs/club-lineup-tab';
+import { ClubTransactionHistory } from '@/components/clubs/club-transaction-history';
 import { useClubDetail, useClubs } from '@/hooks/use-clubs';
 import { usePlayers } from '@/hooks/use-players';
+import { useClubTransactions } from '@/hooks/use-transactions';
 import { cn } from '@/lib/utils';
 import type { ClubRosterPlayer } from '@/types/club';
 import type { PlayerCondition } from '@/types/player';
@@ -362,6 +365,11 @@ export function ClubDetailPage() {
   const isValidClubId = Number.isSafeInteger(clubId) && clubId > 0;
   const queryClient = useQueryClient();
   const club = useClubDetail(clubId, isValidClubId);
+  const transactions = useClubTransactions(
+    clubId,
+    { type: 'COMPRA,VENDA' },
+    isValidClubId && club.isSuccess,
+  );
   const sidebarClubs = useClubs();
   const players = usePlayers(1);
   const notFound = !isValidClubId || (club.isError && isNotFound(club.error));
@@ -377,12 +385,17 @@ export function ClubDetailPage() {
       breadcrumbParent={{ label: 'Clubes', to: '/clubes' }}
       breadcrumbPage={breadcrumbPage}
       refreshLabel="Atualizar clube"
-      isRefreshing={club.isFetching || sidebarClubs.isFetching}
+      isRefreshing={
+        club.isFetching || sidebarClubs.isFetching || transactions.isFetching
+      }
       onRefresh={() => {
         if (isValidClubId) {
           void Promise.all([
             club.refetch(),
             queryClient.invalidateQueries({ queryKey: ['clubs'] }),
+            queryClient.invalidateQueries({
+              queryKey: ['club', clubId, 'transactions'],
+            }),
           ]);
         } else {
           void queryClient.invalidateQueries({ queryKey: ['clubs'] });
@@ -500,6 +513,15 @@ export function ClubDetailPage() {
                   <ClipboardList aria-hidden="true" />
                   Escalação
                 </TabsTrigger>
+                <TabsTrigger value="historico" className="flex-none px-4">
+                  <History aria-hidden="true" />
+                  Histórico
+                  {transactions.data && (
+                    <Badge variant="secondary" className="ml-1">
+                      {transactions.data.data.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
               </TabsList>
               <TabsContent value="elenco" className="pt-4">
                 <ClubRoster players={club.data.players} />
@@ -510,6 +532,9 @@ export function ClubDetailPage() {
                   clubName={club.data.name}
                   roster={club.data.players}
                 />
+              </TabsContent>
+              <TabsContent value="historico" className="pt-4">
+                <ClubTransactionHistory clubId={club.data.id} />
               </TabsContent>
             </Tabs>
           </div>
