@@ -31,7 +31,10 @@ function completeStarters(
         row.condition === 'DOENTE',
     )
   ) {
-    throw new AppError(409, 'Clube sem escalação completa.');
+    throw new AppError(
+      409,
+      `Escalação incompleta: o ${club.name} não tem os 5 titulares.`,
+    );
   }
   return rows as Array<
     MatchStarterRecord & { condition: 'APTO' | 'MAL_CONDICIONADO' }

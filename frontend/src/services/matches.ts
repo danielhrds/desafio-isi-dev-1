@@ -1,5 +1,9 @@
 import { apiClient } from './api-client.js';
-import type { MatchDetail, MatchSummary } from '../types/match.js';
+import type {
+  CreateMatchInput,
+  MatchDetail,
+  MatchSummary,
+} from '../types/match.js';
 
 export async function listMatches(clubId?: number): Promise<MatchSummary[]> {
   const response = await apiClient.get<MatchSummary[]>('/matches', {
@@ -11,6 +15,14 @@ export async function listMatches(clubId?: number): Promise<MatchSummary[]> {
 
 export async function getMatch(id: number): Promise<MatchDetail> {
   const response = await apiClient.get<MatchDetail>(`/matches/${id}`);
+
+  return response.data;
+}
+
+export async function createMatch(
+  input: CreateMatchInput,
+): Promise<MatchDetail> {
+  const response = await apiClient.post<MatchDetail>('/matches', input);
 
   return response.data;
 }

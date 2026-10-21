@@ -39,3 +39,8 @@ export interface MatchDuel {
 export interface MatchDetail extends MatchSummary {
   duels: MatchDuel[];
 }
+
+export interface CreateMatchInput {
+  home_club_id: number;
+  away_club_id: number;
+}

@@ -64,7 +64,11 @@ export function MatchHistoryError({
   );
 }
 
-export function MatchHistoryEmpty() {
+export function MatchHistoryEmpty({
+  onCreateMatch,
+}: {
+  onCreateMatch: () => void;
+}) {
   return (
     <Card className="min-h-64 items-center justify-center gap-3 px-5 py-10 text-center shadow-xs">
       <div className="flex size-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
@@ -77,7 +81,7 @@ export function MatchHistoryEmpty() {
           partidas aqui.
         </CardDescription>
       </div>
-      <Button type="button" variant="outline" disabled>
+      <Button type="button" variant="outline" onClick={onCreateMatch}>
         Nova partida
       </Button>
     </Card>

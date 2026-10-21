@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Swords } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
+import { CreateMatchDialog } from '@/components/matches/create-match-dialog';
 import {
   MatchHistoryEmpty,
   MatchHistoryError,
@@ -20,6 +21,7 @@ import { usePlayers } from '@/hooks/use-players';
 export function MatchesPage() {
   const queryClient = useQueryClient();
   const [selectedClub, setSelectedClub] = useState('all');
+  const [createMatchOpen, setCreateMatchOpen] = useState(false);
   const clubId = selectedClub === 'all' ? undefined : Number(selectedClub);
   const matches = useMatches(clubId);
   const allMatches = useMatches();
@@ -67,7 +69,11 @@ export function MatchesPage() {
               </p>
             </div>
           </div>
-          <Button type="button" className="self-start sm:shrink-0" disabled>
+          <Button
+            type="button"
+            className="self-start sm:shrink-0"
+            onClick={() => setCreateMatchOpen(true)}
+          >
             <Plus aria-hidden="true" />
             Nova partida
           </Button>
@@ -120,7 +126,7 @@ export function MatchesPage() {
             <MatchHistorySkeleton />
           </>
         ) : matches.data.length === 0 && selectedClub === 'all' ? (
-          <MatchHistoryEmpty />
+          <MatchHistoryEmpty onCreateMatch={() => setCreateMatchOpen(true)} />
         ) : (
           <MatchHistoryTable
             matches={matches.data}
@@ -133,6 +139,14 @@ export function MatchesPage() {
           />
         )}
       </main>
+      <CreateMatchDialog
+        open={createMatchOpen}
+        onOpenChange={setCreateMatchOpen}
+        clubs={clubs.data ?? []}
+        clubsLoading={clubs.isPending}
+        clubsError={clubs.error}
+        onRetryClubs={() => void clubs.refetch()}
+      />
     </AppShell>
   );
 }
