@@ -1,11 +1,12 @@
 import axios from 'axios';
 
-export function apiErrorMessage(error: unknown): string {
+export function apiErrorMessage(
+  error: unknown,
+  fallback = 'Verifique a conexão e tente novamente.',
+): string {
   if (axios.isAxiosError<{ message?: string }>(error)) {
-    return (
-      error.response?.data?.message ?? 'Verifique a conexão e tente novamente.'
-    );
+    return error.response?.data?.message ?? fallback;
   }
 
-  return 'Verifique a conexão e tente novamente.';
+  return fallback;
 }

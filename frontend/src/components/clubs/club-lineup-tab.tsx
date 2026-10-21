@@ -40,6 +40,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useClubLineup, useSaveClubLineup } from '@/hooks/use-clubs';
+import { apiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
 import type { ClubFormation, ClubLineup, ClubRosterPlayer } from '@/types/club';
 import type { PlayerPosition } from '@/types/player';
@@ -142,16 +143,6 @@ function formationChangeValues(
   return nextPlayerIds;
 }
 
-function getApiErrorMessage(error: unknown): string {
-  if (axios.isAxiosError<{ message?: string }>(error)) {
-    return (
-      error.response?.data?.message ?? 'Verifique a conexão e tente novamente.'
-    );
-  }
-
-  return 'Verifique a conexão e tente novamente.';
-}
-
 function isConflictResponse(error: unknown): boolean {
   return (
     axios.isAxiosError(error) &&
@@ -236,7 +227,13 @@ function LineupLoading() {
   );
 }
 
-function LineupQueryError({ onRetry }: { onRetry: () => void }) {
+function LineupQueryError({
+  error,
+  onRetry,
+}: {
+  error: unknown;
+  onRetry: () => void;
+}) {
   return (
     <Card className="min-h-72 items-center justify-center gap-3 px-6 py-10 text-center shadow-xs">
       <div className="flex size-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
@@ -245,7 +242,7 @@ function LineupQueryError({ onRetry }: { onRetry: () => void }) {
       <div className="space-y-2">
         <h2 className="font-semibold">Não foi possível carregar a escalação</h2>
         <p className="max-w-sm text-sm text-muted-foreground">
-          Verifique a conexão e tente novamente.
+          {apiErrorMessage(error)}
         </p>
       </div>
       <Button type="button" variant="outline" onClick={onRetry}>
@@ -306,7 +303,12 @@ export function ClubLineupTab({
   if (lineup.isPending) return <LineupLoading />;
 
   if (lineup.isError && !lineup.data) {
-    return <LineupQueryError onRetry={() => void lineup.refetch()} />;
+    return (
+      <LineupQueryError
+        error={lineup.error}
+        onRetry={() => void lineup.refetch()}
+      />
+    );
   }
 
   if (!lineup.data) return null;
@@ -355,7 +357,7 @@ export function ClubLineupTab({
         description: `${clubName} na ${savedLineup.formation}, com ${savedLineup.players.length} titulares devolvidos pela API.`,
       });
     } catch (error) {
-      setServerError(getApiErrorMessage(error));
+      setServerError(apiErrorMessage(error));
 
       if (isConflictResponse(error)) {
         const persistedLineup =

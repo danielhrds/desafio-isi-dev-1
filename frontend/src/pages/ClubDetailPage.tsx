@@ -45,6 +45,7 @@ import { ClubTransactionHistory } from '@/components/clubs/club-transaction-hist
 import { useClubDetail, useClubLineup, useClubs } from '@/hooks/use-clubs';
 import { usePlayers } from '@/hooks/use-players';
 import { useClubTransactions } from '@/hooks/use-transactions';
+import { apiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
 import type { ClubRosterPlayer } from '@/types/club';
 import type { PlayerCondition } from '@/types/player';
@@ -98,16 +99,6 @@ function initials(name: string): string {
   return `${words[0]?.[0] ?? ''}${words.length > 1 ? (words.at(-1)?.[0] ?? '') : ''}`.toLocaleUpperCase(
     'pt-BR',
   );
-}
-
-function errorMessage(error: unknown): string {
-  if (axios.isAxiosError<{ message?: string }>(error)) {
-    return (
-      error.response?.data?.message ?? 'Verifique a conexão e tente novamente.'
-    );
-  }
-
-  return 'Verifique a conexão e tente novamente.';
 }
 
 function isNotFound(error: unknown): boolean {
@@ -201,7 +192,7 @@ function ClubDetailSkeleton() {
   );
 }
 
-function ClubNotFound({ clubLabel }: { clubLabel: string }) {
+function ClubNotFound({ message }: { message: string }) {
   return (
     <Card className="min-h-72 items-center justify-center gap-4 px-6 py-10 text-center shadow-xs">
       <div className="flex size-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
@@ -209,9 +200,7 @@ function ClubNotFound({ clubLabel }: { clubLabel: string }) {
       </div>
       <div className="space-y-2">
         <h2 className="font-semibold">Clube não encontrado</h2>
-        <p className="max-w-sm text-sm text-muted-foreground">
-          {clubLabel}. O endereço pode estar errado ou o clube não existe.
-        </p>
+        <p className="max-w-sm text-sm text-muted-foreground">{message}</p>
       </div>
       <Button variant="outline" asChild>
         <Link to="/clubes">
@@ -441,10 +430,13 @@ export function ClubDetailPage() {
       <main className="min-w-0 flex-1 px-4 py-8 md:px-8">
         {notFound ? (
           <ClubNotFound
-            clubLabel={
+            message={
               isValidClubId
-                ? 'Clube não encontrado'
-                : 'O identificador do clube é inválido'
+                ? apiErrorMessage(
+                    club.error,
+                    'O endereço pode estar errado ou o clube não existe.',
+                  )
+                : 'O identificador do clube é inválido. O endereço pode estar errado ou o clube não existe.'
             }
           />
         ) : club.isPending ? (
@@ -459,7 +451,7 @@ export function ClubDetailPage() {
               Não foi possível carregar o clube
             </AlertTitle>
             <AlertDescription className="block max-w-sm">
-              {errorMessage(club.error)}
+              {apiErrorMessage(club.error)}
             </AlertDescription>
             <Button
               type="button"
