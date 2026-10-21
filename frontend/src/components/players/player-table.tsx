@@ -269,6 +269,11 @@ export function PlayerTable({
                       {player.club_id === null && (
                         <>
                           <DropdownMenuSeparator />
+                          <DropdownMenuItem onSelect={() => onBuy(player)}>
+                            <ShoppingCart aria-hidden="true" />
+                            Comprar
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
                             onSelect={() => onDelete(player)}
