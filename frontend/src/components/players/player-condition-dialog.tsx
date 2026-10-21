@@ -16,6 +16,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useUpdatePlayerCondition } from '@/hooks/use-players';
 import { cn } from '@/lib/utils';
 import type {
@@ -181,20 +183,29 @@ export function PlayerConditionDialog({
             control={form.control}
             name="condition"
             render={({ field }) => (
-              <fieldset className="grid gap-2">
-                <legend className="sr-only">Selecione a condição física</legend>
+              <RadioGroup
+                aria-label="Condição física"
+                name={field.name}
+                value={field.value}
+                onValueChange={field.onChange}
+                onBlur={field.onBlur}
+                disabled={saving}
+                className="gap-2"
+              >
                 {conditionOptions.map((option) => {
                   const disabled =
                     (player.condition === 'DOENTE' &&
                       option.value === 'APTO') ||
                     saving;
                   const selected = field.value === option.value;
+                  const optionId = `condition-${option.value}`;
 
                   return (
-                    <label
+                    <Label
                       key={option.value}
+                      htmlFor={optionId}
                       className={cn(
-                        'flex min-h-[72px] items-start gap-3 rounded-xl border px-3 py-3 transition-colors sm:px-4',
+                        'flex min-h-[72px] items-start gap-3 rounded-xl border px-3 py-3 font-normal transition-colors sm:px-4',
                         selected
                           ? 'border-primary bg-primary-soft'
                           : 'bg-background',
@@ -203,28 +214,13 @@ export function PlayerConditionDialog({
                           : 'cursor-pointer hover:bg-muted/50',
                       )}
                     >
-                      <input
-                        ref={field.ref}
-                        type="radio"
-                        name={field.name}
+                      <RadioGroupItem
+                        ref={selected ? field.ref : undefined}
+                        id={optionId}
                         value={option.value}
-                        checked={selected}
-                        onBlur={field.onBlur}
-                        onChange={() => field.onChange(option.value)}
                         disabled={disabled}
-                        className="peer sr-only"
+                        className="mt-0.5 border-muted-foreground/50 shadow-none data-[state=checked]:border-primary"
                       />
-                      <span
-                        aria-hidden="true"
-                        className={cn(
-                          'mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border border-muted-foreground/50 peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2',
-                          selected && 'border-primary',
-                        )}
-                      >
-                        {selected && (
-                          <span className="size-2 rounded-full bg-primary" />
-                        )}
-                      </span>
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
                           {option.label}
@@ -248,10 +244,10 @@ export function PlayerConditionDialog({
                             </span>
                           )}
                       </span>
-                    </label>
+                    </Label>
                   );
                 })}
-              </fieldset>
+              </RadioGroup>
             )}
           />
 
