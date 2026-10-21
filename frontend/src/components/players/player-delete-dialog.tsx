@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { LoaderCircle, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,6 +38,9 @@ export function PlayerDeleteDialog({
     setErrorMessage(null);
     try {
       await deletion.mutateAsync(player.id);
+      toast.success('Jogador excluído', {
+        description: `${player.name} não aparecerá mais na lista.`,
+      });
       onDeleted();
     } catch (error) {
       setErrorMessage(getErrorMessage(error));

@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
 import { HeartPulse, LoaderCircle, LockKeyhole } from 'lucide-react';
 import { Controller, useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -115,6 +116,9 @@ export function PlayerConditionDialog({
       await updateCondition.mutateAsync({
         id: player.id,
         condition: values.condition,
+      });
+      toast.success('Condição física atualizada', {
+        description: `${player.name} agora está ${conditionLabels[values.condition].toLocaleLowerCase('pt-BR')}.`,
       });
       onClose();
     } catch (error) {

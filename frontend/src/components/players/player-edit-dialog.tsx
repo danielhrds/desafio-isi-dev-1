@@ -8,6 +8,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -85,6 +86,9 @@ export function PlayerEditDialog({
     setServerError(null);
     try {
       await updatePlayer.mutateAsync({ id: player.id, input });
+      toast.success('Jogador atualizado', {
+        description: `${input.name} foi atualizado com sucesso.`,
+      });
       onClose();
     } catch (error) {
       setServerError(
