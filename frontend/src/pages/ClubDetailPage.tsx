@@ -1,8 +1,10 @@
 import axios from 'axios';
+import { useEffect, useState } from 'react';
 import {
   ArrowLeft,
   ClipboardList,
   Coins,
+  HandCoins,
   History,
   Landmark,
   SearchX,
@@ -38,8 +40,9 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ClubLineupTab } from '@/components/clubs/club-lineup-tab';
+import { ClubSellDialog } from '@/components/clubs/club-sell-dialog';
 import { ClubTransactionHistory } from '@/components/clubs/club-transaction-history';
-import { useClubDetail, useClubs } from '@/hooks/use-clubs';
+import { useClubDetail, useClubLineup, useClubs } from '@/hooks/use-clubs';
 import { usePlayers } from '@/hooks/use-players';
 import { useClubTransactions } from '@/hooks/use-transactions';
 import { cn } from '@/lib/utils';
@@ -235,7 +238,13 @@ function conditionBadge(player: ClubRosterPlayer) {
   );
 }
 
-function ClubRoster({ players }: { players: ClubRosterPlayer[] }) {
+function ClubRoster({
+  players,
+  onSell,
+}: {
+  players: ClubRosterPlayer[];
+  onSell: (player: ClubRosterPlayer) => void;
+}) {
   return (
     <Card className="min-w-0 gap-0 overflow-hidden py-0 shadow-xs">
       <CardHeader className="gap-1 border-b px-4 py-4">
@@ -259,7 +268,7 @@ function ClubRoster({ players }: { players: ClubRosterPlayer[] }) {
           </p>
         </CardContent>
       ) : (
-        <Table className="min-w-[1080px]" aria-label="Elenco do clube">
+        <Table className="min-w-[1200px]" aria-label="Elenco do clube">
           <TableHeader>
             <TableRow className="bg-muted-subtle hover:bg-muted-subtle">
               <TableHead className="pl-4 text-muted-foreground">
@@ -285,6 +294,7 @@ function ClubRoster({ players }: { players: ClubRosterPlayer[] }) {
               <TableHead className="pr-4 text-muted-foreground">
                 % de multa
               </TableHead>
+              <TableHead className="w-[120px] pr-4" aria-label="Ações" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -349,6 +359,18 @@ function ClubRoster({ players }: { players: ClubRosterPlayer[] }) {
                       {player.contract.penalty_rate}%
                     </Badge>
                   </TableCell>
+                  <TableCell className="pr-4 text-right">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      aria-label={`Vender ${player.name}`}
+                      onClick={() => onSell(player)}
+                    >
+                      <HandCoins aria-hidden="true" />
+                      Vender
+                    </Button>
+                  </TableCell>
                 </TableRow>
               );
             })}
@@ -365,6 +387,7 @@ export function ClubDetailPage() {
   const isValidClubId = Number.isSafeInteger(clubId) && clubId > 0;
   const queryClient = useQueryClient();
   const club = useClubDetail(clubId, isValidClubId);
+  const lineup = useClubLineup(clubId, isValidClubId && club.isSuccess);
   const transactions = useClubTransactions(
     clubId,
     { type: 'COMPRA,VENDA' },
@@ -372,9 +395,18 @@ export function ClubDetailPage() {
   );
   const sidebarClubs = useClubs();
   const players = usePlayers(1);
+  const [activeTab, setActiveTab] = useState('elenco');
+  const [sellingPlayer, setSellingPlayer] = useState<ClubRosterPlayer | null>(
+    null,
+  );
   const notFound = !isValidClubId || (club.isError && isNotFound(club.error));
   const breadcrumbPage =
     club.data?.name ?? (clubIdParam ? `Clube ${clubIdParam}` : 'Clube');
+
+  useEffect(() => {
+    setActiveTab('elenco');
+    setSellingPlayer(null);
+  }, [clubId]);
 
   return (
     <AppShell
@@ -386,12 +418,16 @@ export function ClubDetailPage() {
       breadcrumbPage={breadcrumbPage}
       refreshLabel="Atualizar clube"
       isRefreshing={
-        club.isFetching || sidebarClubs.isFetching || transactions.isFetching
+        club.isFetching ||
+        lineup.isFetching ||
+        sidebarClubs.isFetching ||
+        transactions.isFetching
       }
       onRefresh={() => {
         if (isValidClubId) {
           void Promise.all([
             club.refetch(),
+            lineup.refetch(),
             queryClient.invalidateQueries({ queryKey: ['clubs'] }),
             queryClient.invalidateQueries({
               queryKey: ['club', clubId, 'transactions'],
@@ -497,7 +533,11 @@ export function ClubDetailPage() {
               />
             </section>
 
-            <Tabs defaultValue="elenco" className="min-w-0">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="min-w-0"
+            >
               <TabsList
                 variant="line"
                 className="w-full justify-start rounded-none border-b p-0"
@@ -524,7 +564,10 @@ export function ClubDetailPage() {
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="elenco" className="pt-4">
-                <ClubRoster players={club.data.players} />
+                <ClubRoster
+                  players={club.data.players}
+                  onSell={setSellingPlayer}
+                />
               </TabsContent>
               <TabsContent value="escalacao" className="pt-4">
                 <ClubLineupTab
@@ -537,6 +580,25 @@ export function ClubDetailPage() {
                 <ClubTransactionHistory clubId={club.data.id} />
               </TabsContent>
             </Tabs>
+            {sellingPlayer && (
+              <ClubSellDialog
+                clubId={club.data.id}
+                clubName={club.data.name}
+                player={sellingPlayer}
+                isStarter={Boolean(
+                  lineup.data?.players.some(
+                    (lineupPlayer) => lineupPlayer.id === sellingPlayer.id,
+                  ),
+                )}
+                isLineupLoading={lineup.isFetching}
+                isLineupUnavailable={lineup.isError && !lineup.data}
+                onClose={() => setSellingPlayer(null)}
+                onViewHistory={() => {
+                  setSellingPlayer(null);
+                  setActiveTab('historico');
+                }}
+              />
+            )}
           </div>
         ) : null}
       </main>
