@@ -295,3 +295,199 @@ test('F5 keeps the players table, menus and create dialog usable at 375px', asyn
   await expectNoPageOverflow();
   expect(mutationRequests).toEqual([]);
 });
+
+for (const viewport of [
+  { width: 1366, height: 768 },
+  { width: 375, height: 812 },
+]) {
+  test(`F02 prevents combining free players and a club at ${viewport.width}px`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize(viewport);
+    const playerRequests: Record<string, string>[] = [];
+    const documentRequests: string[] = [];
+    page.on('request', (request) => {
+      if (
+        request.isNavigationRequest() &&
+        request.frame() === page.mainFrame()
+      ) {
+        documentRequests.push(request.url());
+      }
+    });
+    await page.route('**/api/v1/players?*', async (route) => {
+      const params = new URL(route.request().url()).searchParams;
+      playerRequests.push(Object.fromEntries(params));
+      if (params.get('free') === 'true' && params.has('club_id')) {
+        await route.fulfill({
+          status: 400,
+          json: { message: 'Filtros incompatíveis.' },
+        });
+        return;
+      }
+      if (params.get('limit') === '1') {
+        const free = params.get('free');
+        const total = free === 'true' ? 3 : free === 'false' ? 20 : 23;
+        await route.fulfill({
+          json: {
+            data: [free === 'true' ? players[4] : players[0]],
+            meta: { page: 1, limit: 1, total_items: total, total_pages: total },
+          },
+        });
+        return;
+      }
+      if (params.get('club_id') === '1') {
+        await route.fulfill({
+          json: {
+            data: [players[1], players[3]],
+            meta: { page: 1, limit: 10, total_items: 2, total_pages: 1 },
+          },
+        });
+        return;
+      }
+      if (params.get('free') === 'true') {
+        await route.fulfill({
+          json: {
+            data: [players[4], players[5], players[9]],
+            meta: { page: 1, limit: 10, total_items: 3, total_pages: 1 },
+          },
+        });
+        return;
+      }
+      await route.fallback();
+    });
+
+    async function expectNoPageOverflow() {
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(viewport.width);
+      expect(await page.evaluate(() => window.scrollX)).toBe(0);
+    }
+
+    await page.goto('/jogadores');
+    const table = page.getByRole('table', { name: 'Jogadores', exact: true });
+    const club = page.getByRole('combobox', { name: 'Clube', exact: true });
+    const allTab = page.getByRole('tab', { name: /^Todos/ });
+    const freeTab = page.getByRole('tab', { name: /^Livres/ });
+    const assignedTab = page.getByRole('tab', { name: /^Em clubes/ });
+    const tooltipMessage = '“Livres” não combina com o filtro por clube.';
+    await expect(table).toBeVisible();
+    await expect(allTab).toHaveText('Todos 23');
+    await expect(freeTab).toHaveText(/^Livres\s*3$/);
+    await expect(assignedTab).toHaveText('Em clubes 20');
+    await expect(freeTab).toBeEnabled();
+    await expect(club).toBeEnabled();
+    await expectNoPageOverflow();
+
+    await club.click();
+    const clubOption = page.getByRole('option', {
+      name: 'Águias FC',
+      exact: true,
+    });
+    await expect(clubOption).toBeInViewport({ ratio: 1 });
+    await clubOption.click();
+    await expect(page.getByText('Mostrando 1–2 de 2 jogadores')).toBeVisible();
+    await expect(table.getByRole('row')).toHaveCount(3);
+    await expect(
+      table.getByRole('cell').filter({ hasText: 'Bruno Tavares' }),
+    ).toBeVisible();
+    await expect(
+      table.getByRole('cell').filter({ hasText: 'Diego Ramos' }),
+    ).toBeVisible();
+    await expect(
+      table.getByRole('cell').filter({ hasText: 'Eduardo Paiva' }),
+    ).toHaveCount(0);
+    await expect(allTab).toHaveText('Todos 2');
+    await expect(assignedTab).toHaveText('Em clubes 2');
+    await expect(freeTab).toBeDisabled();
+    await expect(freeTab).toHaveText('Livres');
+    await expect(club).toHaveText('Águias FC');
+    const requestsBeforeBlockedTab = playerRequests.length;
+    const freeTooltipTrigger = freeTab.locator('..');
+    await freeTooltipTrigger.focus();
+    await expect(page.getByRole('tooltip')).toHaveText(tooltipMessage);
+    await expect(page.getByRole('tooltip')).toBeInViewport({ ratio: 1 });
+    await freeTooltipTrigger.press('Enter');
+    await freeTooltipTrigger.press('Space');
+    await expect(allTab).toHaveAttribute('aria-selected', 'true');
+    await expect(club).toHaveText('Águias FC');
+    await expectNoPageOverflow();
+    await page.screenshot({
+      path: testInfo.outputPath('m06-club-filter.png'),
+      fullPage: true,
+    });
+    expect(playerRequests).toHaveLength(requestsBeforeBlockedTab);
+
+    const removeClub = page.getByRole('button', {
+      name: 'Remover filtro Clube: Águias FC',
+      exact: true,
+    });
+    await removeClub.scrollIntoViewIfNeeded();
+    await expect(removeClub).toBeInViewport({ ratio: 1 });
+    await removeClub.click();
+    await expect(
+      page.getByText('Mostrando 1–10 de 23 jogadores'),
+    ).toBeVisible();
+    await expect(freeTab).toBeEnabled();
+    await expect(freeTab).toHaveText(/^Livres\s*3$/);
+    await expect(allTab).toHaveText('Todos 23');
+    await expect(assignedTab).toHaveText('Em clubes 20');
+    await expect(club).toHaveText('Clube');
+    await expect(removeClub).toHaveCount(0);
+
+    await freeTab.click();
+    await expect(page.getByText('Mostrando 1–3 de 3 jogadores')).toBeVisible();
+    await expect(table.getByRole('row')).toHaveCount(4);
+    for (const name of ['Eduardo Paiva', 'Ênio Carvalho', 'Ícaro Mendes']) {
+      await expect(
+        table.getByRole('cell').filter({ hasText: name }),
+      ).toBeVisible();
+    }
+    await expect(
+      table.getByRole('cell').filter({ hasText: 'Bruno Tavares' }),
+    ).toHaveCount(0);
+    await expect(freeTab).toHaveAttribute('aria-selected', 'true');
+    await expect(club).toBeDisabled();
+    const requestsBeforeBlockedClub = playerRequests.length;
+    const clubTooltipTrigger = club.locator('..');
+    await clubTooltipTrigger.scrollIntoViewIfNeeded();
+    await clubTooltipTrigger.focus();
+    await expect(page.getByRole('tooltip')).toHaveText(tooltipMessage);
+    await expect(page.getByRole('tooltip')).toBeInViewport({ ratio: 1 });
+    await clubTooltipTrigger.press('Enter');
+    await clubTooltipTrigger.press('Space');
+    await expect(page.getByRole('listbox')).toHaveCount(0);
+    await expect(freeTab).toHaveAttribute('aria-selected', 'true');
+    await expect(club).toHaveText('Clube');
+    await expectNoPageOverflow();
+    await page.screenshot({
+      path: testInfo.outputPath('j04-free-filter.png'),
+      fullPage: true,
+    });
+    expect(playerRequests).toHaveLength(requestsBeforeBlockedClub);
+
+    await allTab.click();
+    await expect(club).toBeEnabled();
+    await expect(allTab).toHaveAttribute('aria-selected', 'true');
+    await expect(
+      page.getByText('Mostrando 1–10 de 23 jogadores'),
+    ).toBeVisible();
+    await expectNoPageOverflow();
+    const tableRequests = playerRequests.filter(({ limit }) => limit === '10');
+    expect(tableRequests).toContainEqual({
+      page: '1',
+      limit: '10',
+      club_id: '1',
+    });
+    expect(tableRequests).toContainEqual({
+      page: '1',
+      limit: '10',
+      free: 'true',
+    });
+    expect(
+      playerRequests.some(
+        ({ free, club_id }) => free === 'true' && club_id !== undefined,
+      ),
+    ).toBe(false);
+    expect(documentRequests).toHaveLength(1);
+  });
+}
