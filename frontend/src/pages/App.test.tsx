@@ -66,7 +66,18 @@ beforeEach(() => {
 
 describe('F01 player list screen', () => {
   it('renders all required fields from the API, resolving club names and formatting money', async () => {
-    vi.mocked(listPlayers).mockResolvedValue(page);
+    vi.mocked(listPlayers).mockImplementation(
+      async (_requestedPage, filters = {}, limit = 10) => {
+        if (limit === 1) {
+          const total = filters.free === undefined ? 2 : 1;
+          return {
+            data: [filters.free === true ? page.data[1] : page.data[0]],
+            meta: { page: 1, limit: 1, total_items: total, total_pages: total },
+          };
+        }
+        return page;
+      },
+    );
     renderApp();
 
     const table = await screen.findByRole('table', { name: 'Jogadores' });
@@ -84,24 +95,64 @@ describe('F01 player list screen', () => {
       'Valor base',
       'Valor de mercado',
       'Clube',
+      'Ações',
     ]);
-    expect(within(table).getAllByRole('row')).toHaveLength(3);
-    expect(within(table).getByText('Águias FC')).toBeInTheDocument();
-    expect(within(table).getByText('Livre')).toBeInTheDocument();
-    expect(within(table).getByText('Mal condicionado')).toBeInTheDocument();
-    expect(within(table).getByText('37,00')).toBeInTheDocument();
-    expect(within(table).getByText('28,60')).toBeInTheDocument();
-    expect(within(table).getByText('ML')).toBeInTheDocument();
-    expect(within(table).getByText('Meio-campo')).toBeInTheDocument();
-    expect(
-      within(table).getByRole('progressbar', { name: 'Agilidade de Meia Lua' }),
-    ).toHaveAttribute('aria-valuenow', '85');
+    const rows = within(table).getAllByRole('row').slice(1);
+    expect(rows).toHaveLength(2);
+    const expectedRows = [
+      {
+        name: 'Meia Lua',
+        initials: 'ML',
+        positionLabel: 'Meio-campo',
+        fields: ['MEI', '75', '85', '25', 'Mal condicionado', '40,00', '37,00'],
+        club: 'Águias FC',
+      },
+      {
+        name: 'João Silva',
+        initials: 'JS',
+        positionLabel: 'Atacante',
+        fields: ['ATA', '68', '70', '21', 'Apto', '26,00', '28,60'],
+        club: 'Livre',
+      },
+    ];
+    expectedRows.forEach((expectedRow, index) => {
+      const cells = within(rows[index]).getAllByRole('cell');
+      expect(cells).toHaveLength(10);
+      expect(
+        within(cells[0]).getByText(expectedRow.name, { exact: true }),
+      ).toBeInTheDocument();
+      expect(
+        within(cells[0]).getByText(expectedRow.initials, { exact: true }),
+      ).toBeInTheDocument();
+      expect(
+        within(cells[0]).getByText(expectedRow.positionLabel, { exact: true }),
+      ).toBeInTheDocument();
+      expect(cells.slice(1, 8).map((cell) => cell.textContent?.trim())).toEqual(
+        expectedRow.fields,
+      );
+      expect(
+        within(cells[8]).getByText(expectedRow.club, { exact: true }),
+      ).toBeInTheDocument();
+      expect(
+        within(cells[3]).getByRole('progressbar', {
+          name: `Agilidade de ${expectedRow.name}`,
+        }),
+      ).toHaveAttribute('aria-valuenow', expectedRow.fields[2]);
+    });
     expect(
       screen.getByText('Mostrando 1–2 de 2 jogadores'),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Anterior' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Próxima' })).toBeDisabled();
-    expect(listPlayers).toHaveBeenCalledExactlyOnceWith(1);
+    const tableRequests = vi
+      .mocked(listPlayers)
+      .mock.calls.filter(([, , limit = 10]) => limit === 10)
+      .map(([requestedPage, filters = {}, limit = 10]) => ({
+        page: requestedPage,
+        filters,
+        limit,
+      }));
+    expect(tableRequests).toEqual([{ page: 1, filters: {}, limit: 10 }]);
     expect(listClubs).toHaveBeenCalledTimes(1);
   });
 
