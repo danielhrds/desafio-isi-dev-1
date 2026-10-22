@@ -34,6 +34,7 @@ function completeStarters(
     throw new AppError(
       409,
       `Escalação incompleta: o ${club.name} não tem os 5 titulares.`,
+      { club_id: club.id },
     );
   }
   return rows as Array<

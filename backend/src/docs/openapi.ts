@@ -277,7 +277,10 @@ export const openApiDocument = {
           },
           '400': { description: 'Corpo ou ids inválidos; JSON com message' },
           '404': { description: 'Clube inexistente; JSON com message' },
-          '409': { description: 'Escalação incompleta; JSON com message' },
+          '409': {
+            description:
+              'Escalação incompleta; JSON com message e club_id do clube incompleto',
+          },
         },
       },
     },

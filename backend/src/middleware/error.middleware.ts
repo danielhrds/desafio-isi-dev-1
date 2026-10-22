@@ -21,7 +21,7 @@ export const errorMiddleware: ErrorRequestHandler = (
   }
 
   if (error instanceof AppError) {
-    res.status(error.status).json({ message: error.message });
+    res.status(error.status).json({ ...error.details, message: error.message });
     return;
   }
 
