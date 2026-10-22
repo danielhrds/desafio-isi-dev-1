@@ -502,6 +502,26 @@ describe('POST /api/v1/players/{id}/sell — RN15–RN19, B14–B16, B18–B20',
     expect(response.body.penalty).toBe(0);
   });
 
+  it('ignora JSON malformado enviado à venda (V1)', async () => {
+    const clubId = await createClub();
+    const playerId = await createPlayer();
+    expect((await buy(playerId, clubId)).status).toBe(200);
+    await setLoyalty(playerId, new Date(Date.now() - day));
+
+    const response = await sell(playerId)
+      .set('Content-Type', 'application/json')
+      .send('{"club_id":');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      club_id: clubId,
+      player_id: playerId,
+      type: 'VENDA',
+      value: 40,
+      penalty: 0,
+    });
+  });
+
   it.each(['/0', '/01', '/abc', '/999', '/2147483648'])(
     'retorna 404 para jogador inexistente ou ID inválido %s',
     async (suffix) => {

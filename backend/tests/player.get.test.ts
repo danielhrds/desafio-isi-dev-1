@@ -210,4 +210,15 @@ describe('GET /api/v1/players/{id} — V8, RN05, RN06 e B03', () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual(created);
   });
+
+  it('ignora JSON malformado enviado em uma consulta (V1)', async () => {
+    const created = await createPlayer();
+    const response = await request(app)
+      .get('/api/v1/players/1')
+      .set('Content-Type', 'application/json')
+      .send('{"unexpected":');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(created);
+  });
 });

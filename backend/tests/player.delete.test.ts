@@ -82,10 +82,11 @@ async function playerRow() {
 }
 
 describe('DELETE /api/v1/players/{id} — RN09, V8 e B08', () => {
-  it('marca o jogador livre como excluído, responde 204 sem corpo e preserva a linha', async () => {
+  it('ignora JSON malformado, responde 204 sem corpo e preserva a linha', async () => {
     const response = await request(app)
       .delete('/api/v1/players/1?ignored=value')
-      .send({ club_id: 999 });
+      .set('Content-Type', 'application/json')
+      .send('{"club_id":');
     expect(response.status).toBe(204);
     expect(response.text).toBe('');
     expect(response.body).toEqual({});
