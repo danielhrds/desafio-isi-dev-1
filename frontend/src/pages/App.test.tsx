@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AxiosError, AxiosHeaders } from 'axios';
 import { MemoryRouter } from 'react-router-dom';
@@ -156,28 +156,91 @@ describe('F01 player list screen', () => {
     expect(listClubs).toHaveBeenCalledTimes(1);
   });
 
-  it('shows loading and then the empty state for a zero total', async () => {
-    let resolvePage!: (value: PlayerListResponse) => void;
-    vi.mocked(listPlayers).mockReturnValue(
-      new Promise((resolve) => {
-        resolvePage = resolve;
-      }),
-    );
-    renderApp();
+  it.each(['players', 'clubs'] as const)(
+    'shows loading and then the empty state for a zero total when the %s query finishes last',
+    async (lastQuery) => {
+      let resolvePlayers!: (value: PlayerListResponse) => void;
+      const playersRequest = new Promise<PlayerListResponse>((resolve) => {
+        resolvePlayers = resolve;
+      });
+      let resolveClubs!: (value: Awaited<ReturnType<typeof listClubs>>) => void;
+      const clubsRequest = new Promise<Awaited<ReturnType<typeof listClubs>>>(
+        (resolve) => {
+          resolveClubs = resolve;
+        },
+      );
+      const emptyPage: PlayerListResponse = {
+        data: [],
+        meta: { page: 1, limit: 10, total_items: 0, total_pages: 0 },
+      };
+      const clubsResponse = [{ id: 7, name: 'Águias FC', acronym: 'AGU' }];
+      vi.mocked(listPlayers).mockImplementation(
+        (_requestedPage, _filters, limit = 10) => {
+          if (limit === 1) {
+            return Promise.resolve({
+              data: [],
+              meta: { page: 1, limit: 1, total_items: 0, total_pages: 0 },
+            });
+          }
+          return playersRequest;
+        },
+      );
+      vi.mocked(listClubs).mockReturnValue(clubsRequest);
+      renderApp();
 
-    expect(
-      screen.getByRole('status', { name: 'Carregando jogadores' }),
-    ).toBeInTheDocument();
-    resolvePage({
-      data: [],
-      meta: { page: 1, limit: 10, total_items: 0, total_pages: 0 },
-    });
+      function expectLoading() {
+        expect(
+          screen.getByRole('status', { name: 'Carregando jogadores' }),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByRole('table', { name: 'Carregando jogadores' }),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByRole('table', { name: 'Jogadores' }),
+        ).not.toBeInTheDocument();
+        expect(
+          screen.queryByText('Nenhum jogador encontrado'),
+        ).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole('navigation', { name: 'Paginação de jogadores' }),
+        ).not.toBeInTheDocument();
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      }
 
-    expect(
-      await screen.findByText('Nenhum jogador encontrado'),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole('table')).not.toBeInTheDocument();
-  });
+      expectLoading();
+      await act(async () => {
+        if (lastQuery === 'players') resolveClubs(clubsResponse);
+        else resolvePlayers(emptyPage);
+      });
+      if (lastQuery === 'players') {
+        expect(await screen.findByText('Águias FC')).toBeInTheDocument();
+      } else {
+        expect(
+          await screen.findByText('0 clubes · 0 jogadores'),
+        ).toBeInTheDocument();
+      }
+      expectLoading();
+
+      await act(async () => {
+        if (lastQuery === 'players') resolvePlayers(emptyPage);
+        else resolveClubs(clubsResponse);
+      });
+      expect(
+        await screen.findByText('Nenhum jogador encontrado'),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('table')).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('status', { name: 'Carregando jogadores' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('navigation', { name: 'Paginação de jogadores' }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Novo jogador' }),
+      ).toBeEnabled();
+    },
+  );
 
   it('shows the API message and retries the failed query', async () => {
     const error = new AxiosError(
