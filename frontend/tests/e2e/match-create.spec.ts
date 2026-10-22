@@ -498,3 +498,57 @@ test('mostra exatamente a recusa 409 da API e destaca o mandante incompleto como
   ).toHaveAttribute('aria-invalid', 'false');
   expect(api.unexpectedRequests).toEqual([]);
 });
+
+test('mostra exatamente a recusa 409 e destaca o visitante incompleto em 375 px', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  const api = await mockApi(page);
+  const message = 'Escalação incompleta: o Gama SC não tem os 5 titulares.';
+  api.setPostReply({ status: 409, body: { message, club_id: 3 } });
+  await openCreateDialog(page);
+  await expectNoHorizontalPageOverflow(page);
+  await selectClub(page, 'Mandante', 'Aurora FC (AUR)');
+  await selectClub(page, 'Visitante', 'Gama SC (GAM)');
+
+  const responsePromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' &&
+      new URL(response.url()).pathname === '/api/v1/matches',
+  );
+  await page.getByRole('button', { name: 'Jogar partida' }).click();
+
+  await expect.poll(() => api.posts.length).toBe(1);
+  const response = await responsePromise;
+  expect(response.status()).toBe(409);
+  expect(await response.json()).toEqual({ message, club_id: 3 });
+  expect(api.posts).toEqual([
+    {
+      url: '/api/v1/matches',
+      body: { home_club_id: 1, away_club_id: 3 },
+    },
+  ]);
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('alert')).toContainText(
+    'Não foi possível jogar a partida',
+  );
+  await expect(dialog.getByText(message, { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/partidas$/);
+
+  const awayClubSelect = page.getByRole('combobox', { name: 'Visitante' });
+  await awayClubSelect.scrollIntoViewIfNeeded();
+  await expect(awayClubSelect).toBeInViewport();
+  await expect(awayClubSelect).toHaveAttribute('aria-invalid', 'true');
+  await expect(awayClubSelect).toHaveAttribute(
+    'aria-describedby',
+    'create-match-request-error',
+  );
+  await expect(
+    page.getByRole('combobox', { name: 'Mandante' }),
+  ).toHaveAttribute('aria-invalid', 'false');
+  expect(api.posts).toHaveLength(1);
+  expect(api.unexpectedRequests).toEqual([]);
+  await expectNoHorizontalPageOverflow(page);
+});
