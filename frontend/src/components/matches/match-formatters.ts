@@ -60,6 +60,17 @@ export function errorMessage(error: unknown): string {
   return 'Verifique a conexão e tente novamente.';
 }
 
+export function errorClubId(error: unknown): number | null {
+  if (axios.isAxiosError<{ club_id?: unknown }>(error)) {
+    const clubId = error.response?.data?.club_id;
+    return typeof clubId === 'number' && Number.isSafeInteger(clubId)
+      ? clubId
+      : null;
+  }
+
+  return null;
+}
+
 export function isNotFound(error: unknown): boolean {
   return axios.isAxiosError(error) && error.response?.status === 404;
 }

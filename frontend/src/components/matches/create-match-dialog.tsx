@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCreateMatch } from '@/hooks/use-matches';
-import { errorMessage } from './match-formatters';
+import { errorClubId, errorMessage } from './match-formatters';
 import {
   createMatchSchema,
   emptyCreateMatchForm,
@@ -33,6 +33,8 @@ import {
   type CreateMatchPayload,
 } from './create-match-schema';
 import type { ClubListItem } from '@/types/club';
+
+type MatchRequestError = { message: string; clubId: number | null };
 
 export function CreateMatchDialog({
   open,
@@ -51,7 +53,9 @@ export function CreateMatchDialog({
 }) {
   const navigate = useNavigate();
   const createMatch = useCreateMatch();
-  const [requestError, setRequestError] = useState<string | null>(null);
+  const [requestError, setRequestError] = useState<MatchRequestError | null>(
+    null,
+  );
   const form = useForm<CreateMatchFormValues, unknown, CreateMatchPayload>({
     resolver: zodResolver(createMatchSchema),
     defaultValues: emptyCreateMatchForm,
@@ -84,7 +88,10 @@ export function CreateMatchDialog({
       onOpenChange(false);
       navigate(`/partidas/${match.id}`);
     } catch (error) {
-      setRequestError(errorMessage(error));
+      setRequestError({
+        message: errorMessage(error),
+        clubId: errorClubId(error),
+      });
     }
   }
 
@@ -113,10 +120,10 @@ export function CreateMatchDialog({
           className="space-y-4"
         >
           {requestError && (
-            <Alert variant="destructive">
+            <Alert id="create-match-request-error" variant="destructive">
               <CircleAlert aria-hidden="true" />
               <AlertTitle>Não foi possível jogar a partida</AlertTitle>
-              <AlertDescription>{requestError}</AlertDescription>
+              <AlertDescription>{requestError.message}</AlertDescription>
             </Alert>
           )}
 
@@ -172,11 +179,16 @@ export function CreateMatchDialog({
                   >
                     <SelectTrigger
                       id="create-match-home"
-                      aria-invalid={fieldState.invalid}
+                      aria-invalid={
+                        fieldState.invalid ||
+                        requestError?.clubId === Number(field.value)
+                      }
                       aria-describedby={
                         fieldState.error
                           ? 'create-match-home-error'
-                          : 'create-match-home-help'
+                          : requestError?.clubId === Number(field.value)
+                            ? 'create-match-request-error'
+                            : 'create-match-home-help'
                       }
                       className="w-full"
                     >
@@ -239,11 +251,16 @@ export function CreateMatchDialog({
                   >
                     <SelectTrigger
                       id="create-match-away"
-                      aria-invalid={fieldState.invalid}
+                      aria-invalid={
+                        fieldState.invalid ||
+                        requestError?.clubId === Number(field.value)
+                      }
                       aria-describedby={
                         fieldState.error
                           ? 'create-match-away-error'
-                          : 'create-match-away-help'
+                          : requestError?.clubId === Number(field.value)
+                            ? 'create-match-request-error'
+                            : 'create-match-away-help'
                       }
                       className="w-full"
                     >
