@@ -33,8 +33,6 @@ const moneyFormatter = new Intl.NumberFormat('pt-BR', {
   maximumFractionDigits: 2,
 });
 
-const integerFormatter = new Intl.NumberFormat('pt-BR');
-
 const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
   day: '2-digit',
   month: '2-digit',
@@ -229,7 +227,7 @@ function SaleResult({
         />
         <DetailRow
           label="Dias restantes"
-          value={integerFormatter.format(result.remaining_days)}
+          value={String(result.remaining_days)}
         />
         <DetailRow
           label="Multa"
@@ -405,7 +403,7 @@ export function ClubSellDialog({
               />
               <DetailRow
                 label="Dias restantes"
-                value={integerFormatter.format(player.contract.remaining_days)}
+                value={String(player.contract.remaining_days)}
               />
               <DetailRow
                 label="% de multa se vender agora"

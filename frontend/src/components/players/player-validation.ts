@@ -33,7 +33,12 @@ export const playerNameSchema = z
     }
   });
 
-export const playerPositionSchema = z.enum(['GOL', 'ZAG', 'LAT', 'MEI', 'ATA']);
+export const playerPositionSchema = z.enum(
+  ['GOL', 'ZAG', 'LAT', 'MEI', 'ATA'],
+  {
+    required_error: 'Selecione uma posição.',
+  },
+);
 
 export const playerAgeSchema = z
   .number({ invalid_type_error: 'Informe a idade.' })

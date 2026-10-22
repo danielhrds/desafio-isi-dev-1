@@ -55,8 +55,6 @@ const moneyFormatter = new Intl.NumberFormat('pt-BR', {
   maximumFractionDigits: 2,
 });
 
-const integerFormatter = new Intl.NumberFormat('pt-BR');
-
 const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
   day: '2-digit',
   month: '2-digit',
@@ -335,7 +333,7 @@ function ClubRoster({
                     </time>
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {integerFormatter.format(player.contract.remaining_days)}
+                    {String(player.contract.remaining_days)}
                   </TableCell>
                   <TableCell className="pr-4">
                     <Badge

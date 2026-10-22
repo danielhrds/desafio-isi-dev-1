@@ -101,7 +101,6 @@ export function PlayerCreateDialog({
     formState: { errors, isSubmitting, isSubmitted },
   } = useForm<PlayerCreateFormValues, unknown, PlayerCreatePayload>({
     resolver: zodResolver(playerCreateSchema),
-    defaultValues: { position: 'MEI' },
   });
   const values = useWatch({ control });
   const saving = isSubmitting || createPlayer.isPending;
@@ -262,6 +261,10 @@ export function PlayerCreateDialog({
                 className="grid grid-cols-2 gap-2 sm:grid-cols-5"
                 role="group"
                 aria-labelledby="create-position-label"
+                aria-invalid={!!errors.position}
+                aria-describedby={
+                  errors.position ? 'create-position-error' : undefined
+                }
               >
                 {positions.map((position) => (
                   <Button
@@ -283,6 +286,12 @@ export function PlayerCreateDialog({
                   </Button>
                 ))}
               </div>
+              {errors.position?.message && (
+                <FieldError
+                  id="create-position-error"
+                  message={errors.position.message}
+                />
+              )}
             </div>
 
             <div className="grid gap-4 sm:grid-cols-3">
