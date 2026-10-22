@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import axios from 'axios';
 import { LoaderCircle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -32,9 +32,12 @@ export function PlayerDeleteDialog({
   onDeleted: () => void;
 }) {
   const deletion = useDeletePlayer();
+  const deletionInFlight = useRef(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function confirmDelete() {
+    if (deletionInFlight.current) return;
+    deletionInFlight.current = true;
     setErrorMessage(null);
     try {
       await deletion.mutateAsync(player.id);
@@ -44,6 +47,8 @@ export function PlayerDeleteDialog({
       onDeleted();
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
+    } finally {
+      deletionInFlight.current = false;
     }
   }
 
