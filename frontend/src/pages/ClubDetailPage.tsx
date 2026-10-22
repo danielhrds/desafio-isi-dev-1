@@ -439,7 +439,7 @@ export function ClubDetailPage() {
           />
         ) : club.isPending ? (
           <ClubDetailSkeleton />
-        ) : club.isError ? (
+        ) : club.isError && !club.data ? (
           <Alert
             variant="destructive"
             className="flex min-h-72 flex-col items-center justify-center gap-2 text-center"
@@ -462,6 +462,30 @@ export function ClubDetailPage() {
           </Alert>
         ) : club.data ? (
           <div className="space-y-6">
+            {club.isError && club.data && (
+              <Alert
+                variant="warning"
+                className="flex flex-wrap items-center gap-3"
+              >
+                <ServerOff aria-hidden="true" />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <AlertTitle>Não foi possível atualizar o clube</AlertTitle>
+                  <AlertDescription>
+                    {apiErrorMessage(club.error)} Os dados exibidos podem estar
+                    desatualizados.
+                  </AlertDescription>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={club.isFetching}
+                  onClick={() => void club.refetch()}
+                >
+                  Tentar novamente
+                </Button>
+              </Alert>
+            )}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex min-w-0 items-center gap-4">
                 <div className="flex size-14 shrink-0 items-center justify-center rounded-xl border bg-muted text-sm font-semibold">
