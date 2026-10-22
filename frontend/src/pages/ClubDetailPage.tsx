@@ -560,20 +560,26 @@ export function ClubDetailPage() {
             >
               <TabsList
                 variant="line"
-                className="w-full justify-start rounded-none border-b p-0"
+                className="w-full max-w-full justify-start overflow-x-auto overscroll-x-contain rounded-none border-b p-0 pb-1 sm:overflow-visible sm:pb-0"
               >
-                <TabsTrigger value="elenco" className="flex-none px-4">
+                <TabsTrigger value="elenco" className="flex-none px-2 sm:px-4">
                   <Shirt aria-hidden="true" />
                   Elenco
                   <Badge variant="secondary" className="ml-1">
                     {club.data.players.length}
                   </Badge>
                 </TabsTrigger>
-                <TabsTrigger value="escalacao" className="flex-none px-4">
+                <TabsTrigger
+                  value="escalacao"
+                  className="flex-none px-2 sm:px-4"
+                >
                   <ClipboardList aria-hidden="true" />
                   Escalação
                 </TabsTrigger>
-                <TabsTrigger value="historico" className="flex-none px-4">
+                <TabsTrigger
+                  value="historico"
+                  className="flex-none px-2 sm:px-4"
+                >
                   <History aria-hidden="true" />
                   Histórico
                   {transactions.data && (
