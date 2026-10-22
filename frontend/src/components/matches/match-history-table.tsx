@@ -97,9 +97,16 @@ export function MatchHistoryTable({
             aria-label="Filtrar partidas por clube"
           >
             <Shield aria-hidden="true" />
-            <SelectValue placeholder="Clube: todos" />
+            <SelectValue
+              className="min-w-0 flex-1"
+              placeholder="Clube: todos"
+            />
           </SelectTrigger>
-          <SelectContent align="end">
+          <SelectContent
+            position="popper"
+            align="end"
+            className="w-[var(--radix-select-trigger-width)]"
+          >
             <SelectItem value="all">Clube: todos</SelectItem>
             {clubs.map((club) => (
               <SelectItem key={club.id} value={String(club.id)}>

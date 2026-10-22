@@ -181,6 +181,7 @@ export function CreateMatchDialog({
                       className="w-full"
                     >
                       <SelectValue
+                        className="min-w-0 flex-1"
                         placeholder={
                           clubsLoading
                             ? 'Carregando clubes...'
@@ -188,7 +189,10 @@ export function CreateMatchDialog({
                         }
                       />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent
+                      position="popper"
+                      className="w-[var(--radix-select-trigger-width)]"
+                    >
                       {clubs.map((club) => (
                         <SelectItem key={club.id} value={String(club.id)}>
                           {club.name} ({club.acronym})
@@ -244,6 +248,7 @@ export function CreateMatchDialog({
                       className="w-full"
                     >
                       <SelectValue
+                        className="min-w-0 flex-1"
                         placeholder={
                           clubsLoading
                             ? 'Carregando clubes...'
@@ -251,7 +256,10 @@ export function CreateMatchDialog({
                         }
                       />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent
+                      position="popper"
+                      className="w-[var(--radix-select-trigger-width)]"
+                    >
                       {clubs.map((club) => (
                         <SelectItem key={club.id} value={String(club.id)}>
                           {club.name} ({club.acronym})
