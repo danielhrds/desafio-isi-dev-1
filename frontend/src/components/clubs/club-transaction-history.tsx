@@ -595,10 +595,18 @@ export function ClubTransactionHistory({ clubId }: { clubId: number }) {
               <span className="text-muted-foreground">Jogador:</span>
               <SelectValue placeholder="todos" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent
+              position="popper"
+              align="start"
+              className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)]"
+            >
               <SelectItem value="all">todos</SelectItem>
               {players.map((player) => (
-                <SelectItem key={player.id} value={String(player.id)}>
+                <SelectItem
+                  key={player.id}
+                  value={String(player.id)}
+                  className="whitespace-normal break-all"
+                >
                   {player.name}
                 </SelectItem>
               ))}
@@ -635,14 +643,14 @@ export function ClubTransactionHistory({ clubId }: { clubId: number }) {
             tabIndex={0}
             className="overflow-x-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <div className="min-w-[1040px]">
-              {transactions.data.data.length === 0 ? (
-                <EmptyHistory filtered={hasActiveFilters} />
-              ) : (
+            {transactions.data.data.length === 0 ? (
+              <EmptyHistory filtered={hasActiveFilters} />
+            ) : (
+              <div className="min-w-[1040px]">
                 <HistoryTable transactions={transactions.data.data} />
-              )}
-              <SummaryStrip summary={transactions.data.summary} />
-            </div>
+              </div>
+            )}
+            <SummaryStrip summary={transactions.data.summary} />
           </div>
         ) : null}
       </Card>

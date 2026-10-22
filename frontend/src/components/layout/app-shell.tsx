@@ -239,9 +239,9 @@ export function AppShell({
         <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4 md:px-6">
           <SidebarTrigger type="button" aria-label="Alternar menu" />
           <span aria-hidden="true" className="h-5 w-px bg-border" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
+          <Breadcrumb className="min-w-0 flex-1 overflow-hidden">
+            <BreadcrumbList className="min-w-0 flex-nowrap overflow-hidden">
+              <BreadcrumbItem className="shrink-0">
                 {activeSection === 'matches' || activeSection === 'standings'
                   ? 'Liga'
                   : 'Mercado'}
@@ -251,7 +251,7 @@ export function AppShell({
               </BreadcrumbSeparator>
               {breadcrumbParent && (
                 <>
-                  <BreadcrumbItem>
+                  <BreadcrumbItem className="shrink-0">
                     <BreadcrumbLink asChild>
                       <Link to={breadcrumbParent.to}>
                         {breadcrumbParent.label}
@@ -263,8 +263,13 @@ export function AppShell({
                   </BreadcrumbSeparator>
                 </>
               )}
-              <BreadcrumbItem>
-                <BreadcrumbPage>{breadcrumbPage}</BreadcrumbPage>
+              <BreadcrumbItem className="min-w-0 flex-1 overflow-hidden">
+                <BreadcrumbPage
+                  className="block truncate"
+                  title={breadcrumbPage}
+                >
+                  {breadcrumbPage}
+                </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
