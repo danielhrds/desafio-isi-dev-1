@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { Toaster } from '../components/ui/sonner.js';
 import { apiClient } from '../services/api-client.js';
 import type { ClubListItem, ClubSort, ClubSummary } from '../types/club.js';
 import type { PlayerListResponse } from '../types/player.js';
@@ -121,7 +122,7 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-function renderPage() {
+function renderPage({ withToaster = false }: { withToaster?: boolean } = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -131,6 +132,7 @@ function renderPage() {
       <MemoryRouter initialEntries={['/clubes']}>
         <QueryClientProvider client={queryClient}>
           {children}
+          {withToaster && <Toaster position="bottom-right" theme="light" />}
         </QueryClientProvider>
       </MemoryRouter>
     );
@@ -368,6 +370,112 @@ describe('F3 club listing states', () => {
       get.mock.calls.filter(
         ([url, config]) =>
           url === '/clubs' && sortFromConfig(config) === 'name',
+      ),
+    ).toHaveLength(2);
+  });
+});
+
+describe('F05 club creation', () => {
+  it('creates one club on double click and refreshes the list from API data', async () => {
+    const createdClub: ClubSummary = {
+      id: 4,
+      name: 'Leões da Serra',
+      acronym: 'LDS',
+      cash: 300,
+      squad_value: 0,
+      net_worth: 300,
+    };
+    const summariesAfterCreation = [...clubLists.name, createdClub];
+    const clubsAfterCreation = [
+      ...clubs,
+      {
+        id: createdClub.id,
+        name: createdClub.name,
+        acronym: createdClub.acronym,
+      },
+    ];
+    const pendingPost = deferred<AxiosResponse<ClubSummary>>();
+    const get = vi
+      .spyOn(apiClient, 'get')
+      .mockImplementation(async (url, config) => {
+        if (url === '/players') return responseWith(playerPage);
+        if (url === '/clubs') {
+          const sort = sortFromConfig(config);
+          const requestsWithSameSort = get.mock.calls.filter(
+            ([requestUrl, requestConfig]) =>
+              requestUrl === '/clubs' && sortFromConfig(requestConfig) === sort,
+          ).length;
+
+          if (sort === 'name') {
+            return responseWith(
+              requestsWithSameSort === 1
+                ? clubLists.name
+                : summariesAfterCreation,
+            );
+          }
+
+          return responseWith(
+            requestsWithSameSort === 1 ? clubs : clubsAfterCreation,
+          );
+        }
+
+        throw new Error(`Unexpected GET ${url}`);
+      });
+    const post = vi.spyOn(apiClient, 'post').mockImplementation(async (url) => {
+      if (url !== '/clubs') throw new Error(`Unexpected POST ${url}`);
+      return pendingPost.promise;
+    });
+    const user = userEvent.setup();
+
+    renderPage({ withToaster: true });
+    await screen.findByRole('table', { name: 'Clubes' });
+    await user.click(screen.getByRole('button', { name: 'Novo clube' }));
+    await user.type(
+      screen.getByRole('textbox', { name: 'Nome' }),
+      createdClub.name,
+    );
+    await user.type(
+      screen.getByRole('textbox', { name: 'Sigla' }),
+      createdClub.acronym,
+    );
+
+    await user.dblClick(screen.getByRole('button', { name: 'Criar clube' }));
+
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    expect(post).toHaveBeenCalledWith('/clubs', {
+      name: 'Leões da Serra',
+      acronym: 'LDS',
+    });
+    expect(screen.getByRole('button', { name: 'Criar clube' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
+
+    pendingPost.resolve(responseWith(createdClub));
+
+    expect(await screen.findByText('Clube criado')).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        'Leões da Serra (LDS) começa com 300,00 em caixa.',
+      ),
+    ).toBeInTheDocument();
+
+    const row = await screen.findByRole('row', { name: /Leões da Serra/ });
+    const cells = within(row).getAllByRole('cell');
+    expect(cells[2]).toHaveTextContent('300,00');
+    expect(cells[3]).toHaveTextContent('0,00');
+    expect(cells[4]).toHaveTextContent('300,00');
+    expect(
+      await screen.findByRole('link', { name: /Leões da Serra/ }),
+    ).toBeInTheDocument();
+    expect(
+      get.mock.calls.filter(
+        ([url, config]) =>
+          url === '/clubs' && sortFromConfig(config) === 'name',
+      ),
+    ).toHaveLength(2);
+    expect(
+      get.mock.calls.filter(
+        ([url, config]) =>
+          url === '/clubs' && sortFromConfig(config) === undefined,
       ),
     ).toHaveLength(2);
   });
