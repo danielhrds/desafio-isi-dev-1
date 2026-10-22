@@ -109,6 +109,13 @@ export function PlayersPage() {
         players.isFetching || allPlayers.isFetching || clubs.isFetching
       }
       onRefresh={() => {
+        if (
+          queryClient.isFetching({ queryKey: ['players'] }) > 0 ||
+          queryClient.isFetching({ queryKey: ['player-count'] }) > 0 ||
+          queryClient.isFetching({ queryKey: ['clubs'] }) > 0
+        ) {
+          return;
+        }
         void queryClient.invalidateQueries({ queryKey: ['players'] });
         void queryClient.invalidateQueries({ queryKey: ['player-count'] });
         void queryClient.invalidateQueries({ queryKey: ['clubs'] });
