@@ -100,7 +100,7 @@ export const lineupService = {
         for (const playerId of [...input.player_ids].sort((a, b) => a - b)) {
           const player = await playerRepository.findActiveById(playerId, {
             transaction,
-            forUpdate: true,
+            forNoKeyUpdate: true,
           });
           if (!player) throw new AppError(404, 'Jogador não encontrado.');
           players.push(player);

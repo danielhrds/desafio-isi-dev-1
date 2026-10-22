@@ -159,7 +159,7 @@ export const playerService = {
     return sequelize.transaction(async (transaction) => {
       const current = await playerRepository.findActiveById(id, {
         transaction,
-        forUpdate: true,
+        forNoKeyUpdate: true,
       });
       if (!current) {
         throw new AppError(404, 'Jogador não encontrado.');
@@ -193,7 +193,7 @@ export const playerService = {
     return sequelize.transaction(async (transaction) => {
       const current = await playerRepository.findActiveById(id, {
         transaction,
-        forUpdate: true,
+        forNoKeyUpdate: true,
       });
       if (!current) {
         throw new AppError(404, 'Jogador não encontrado.');
@@ -237,7 +237,7 @@ export const playerService = {
     await sequelize.transaction(async (transaction) => {
       const player = await playerRepository.findActiveById(id, {
         transaction,
-        forUpdate: true,
+        forNoKeyUpdate: true,
       });
       if (!player) {
         throw new AppError(404, 'Jogador não encontrado.');

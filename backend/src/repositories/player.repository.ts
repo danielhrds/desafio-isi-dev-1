@@ -111,7 +111,7 @@ function listOrder(alias: 'p' | 'page', sort: string): string {
 
 interface RepositoryOptions {
   transaction?: Transaction;
-  forUpdate?: boolean;
+  forNoKeyUpdate?: boolean;
 }
 
 function toRecord(player: Player): PlayerRecord {
@@ -313,7 +313,9 @@ export const playerRepository = {
   ): Promise<PlayerRecord | null> {
     const player = await Player.findByPk(id, {
       transaction: options.transaction,
-      lock: options.forUpdate ? options.transaction?.LOCK.UPDATE : undefined,
+      lock: options.forNoKeyUpdate
+        ? options.transaction?.LOCK.NO_KEY_UPDATE
+        : undefined,
     });
     return player ? toRecord(player) : null;
   },

@@ -22,7 +22,7 @@ export const marketService = {
     return sequelize.transaction(async (transaction) => {
       const player = await playerRepository.findActiveById(playerId, {
         transaction,
-        forUpdate: true,
+        forNoKeyUpdate: true,
       });
       if (!player) throw new AppError(404, 'Jogador não encontrado.');
 
@@ -132,7 +132,7 @@ export const marketService = {
     return sequelize.transaction(async (transaction) => {
       const player = await playerRepository.findActiveById(playerId, {
         transaction,
-        forUpdate: true,
+        forNoKeyUpdate: true,
       });
       if (!player) throw new AppError(404, 'Jogador não encontrado.');
       if (player.clubId === null) {
