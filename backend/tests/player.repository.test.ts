@@ -11,6 +11,7 @@ const testDatabaseName = `passe_test_${randomBytes(6).toString('hex')}`;
 let adminDatabase: Sequelize;
 let database: Sequelize;
 let playerRepository: typeof import('../src/repositories/player.repository.js').playerRepository;
+let clubRepository: typeof import('../src/repositories/club.repository.js').clubRepository;
 
 const samplePlayer: PlayerCreate = {
   name: 'Meia Lua',
@@ -50,6 +51,7 @@ beforeAll(async () => {
   ({ sequelize: database } = await import('../src/database/sequelize.js'));
   ({ playerRepository } =
     await import('../src/repositories/player.repository.js'));
+  ({ clubRepository } = await import('../src/repositories/club.repository.js'));
 }, 60_000);
 
 afterEach(async () => {
@@ -216,6 +218,98 @@ describe('B3: migration inicial de clubes e jogadores', () => {
          VALUES ('Delta FC', 'delta fc', 'delta fc', 'AGI')`,
       ),
     ).rejects.toMatchObject({ parent: { code: '23505' } });
+  });
+});
+
+describe('locks de jogadores e FKs de duelos', () => {
+  it('serializa mudanças sem bloquear o KEY SHARE usado pela FK da partida', async () => {
+    const home = await clubRepository.create({
+      name: 'Casa FC',
+      normalizedName: 'casa fc',
+      searchName: 'casa fc',
+      acronym: 'CAS',
+    });
+    const away = await clubRepository.create({
+      name: 'Visitante FC',
+      normalizedName: 'visitante fc',
+      searchName: 'visitante fc',
+      acronym: 'VIS',
+    });
+    const attacker = await playerRepository.create(samplePlayer);
+    const defender = await playerRepository.create({
+      ...samplePlayer,
+      name: 'Davi Lins',
+      searchName: 'davi lins',
+    });
+    const [match] = await database.query<{ id: number }>(
+      `INSERT INTO partidas (
+         mandante_id, visitante_id, gols_mandante, gols_visitante,
+         formacao_mandante, formacao_visitante, jogada_em
+       ) VALUES (:homeId, :awayId, 0, 0, '2-1-1', '2-1-1', now())
+       RETURNING id`,
+      {
+        type: QueryTypes.SELECT,
+        replacements: { homeId: home.id, awayId: away.id },
+      },
+    );
+
+    const playerLock = await database.transaction();
+    try {
+      await playerRepository.findActiveById(attacker.id, {
+        transaction: playerLock,
+        forNoKeyUpdate: true,
+      });
+
+      const competingUpdate = await database.transaction();
+      try {
+        await expect(
+          database.query(
+            'SELECT id FROM jogadores WHERE id = :id FOR UPDATE NOWAIT',
+            {
+              type: QueryTypes.SELECT,
+              replacements: { id: attacker.id },
+              transaction: competingUpdate,
+            },
+          ),
+        ).rejects.toMatchObject({ parent: { code: '55P03' } });
+      } finally {
+        await competingUpdate.rollback();
+      }
+
+      const duelInsert = await database.transaction();
+      try {
+        await database.query("SET LOCAL lock_timeout = '1s'", {
+          transaction: duelInsert,
+        });
+        await database.query(
+          `INSERT INTO duelos_partida (
+             partida_id, ordem, clube_atacante_id, atacante_id, defensor_id,
+             nome_atacante, nome_defensor, posicao_atacante, posicao_defensor,
+             condicao_atacante, condicao_defensor, atributo_ataque,
+             atributo_defesa, valor_ataque, valor_defesa, gol
+           ) VALUES (
+             :matchId, 1, :homeId, :attackerId, :defenderId,
+             'Meia Lua', 'Davi Lins', 'MEI', 'MEI', 'APTO', 'APTO',
+             'passing', 'defending', 68, 55, false
+           )`,
+          {
+            transaction: duelInsert,
+            replacements: {
+              matchId: match.id,
+              homeId: home.id,
+              attackerId: attacker.id,
+              defenderId: defender.id,
+            },
+          },
+        );
+        await duelInsert.commit();
+      } catch (error) {
+        await duelInsert.rollback();
+        throw error;
+      }
+    } finally {
+      await playerLock.rollback();
+    }
   });
 });
 
