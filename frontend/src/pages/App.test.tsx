@@ -301,75 +301,125 @@ describe('F01 player list screen', () => {
   });
 
   it('navigates through 10-item pages using the API meta, including the short last page', async () => {
-    const names = [
-      'André Lacerda',
-      'Bruno Tavares',
-      'Danilo Freitas',
-      'Diego Ramos',
-      'Eduardo Paiva',
-      'Ênio Carvalho',
-      'Felipe Moura',
-      'Gabriel Antunes',
-      'Heitor Gomes',
-      'Ícaro Mendes',
-      'João Silva',
-      'Leandro Costa',
-      'Marcelo Reis',
-      'Natan Alves',
-      'Otávio Rezende',
-      'Paulo Moreira',
-      'Rafael Nogueira',
-      'Renan Castro',
-      'Sávio Lima',
-      'Tiago Moraes',
-      'Ulisses Rocha',
-      'Vitor Martins',
-      'Wesley Santos',
+    const namesByPage = [
+      [
+        'André Lacerda',
+        'Bruno Tavares',
+        'Danilo Freitas',
+        'Diego Ramos',
+        'Eduardo Paiva',
+        'Ênio Carvalho',
+        'Felipe Moura',
+        'Gabriel Antunes',
+        'Heitor Gomes',
+        'Ícaro Mendes',
+      ],
+      [
+        'João Silva',
+        'Leandro Costa',
+        'Marcelo Reis',
+        'Natan Alves',
+        'Otávio Rezende',
+        'Paulo Moreira',
+        'Rafael Nogueira',
+        'Renan Castro',
+        'Sávio Lima',
+        'Tiago Moraes',
+      ],
+      ['Ulisses Rocha', 'Vitor Martins', 'Wesley Santos'],
     ];
-    vi.mocked(listPlayers).mockImplementation(async (requestedPage) => {
-      const first = (requestedPage - 1) * 10;
-      return {
-        data: names.slice(first, first + 10).map((name, index) => ({
+    const responses: PlayerListResponse[] = namesByPage.map(
+      (names, pageIndex) => ({
+        data: names.map((name, index) => ({
           ...page.data[0],
-          id: first + index + 1,
+          id: pageIndex * 10 + index + 1,
           name,
         })),
         meta: {
-          page: requestedPage,
+          page: pageIndex + 1,
           limit: 10,
           total_items: 23,
           total_pages: 3,
         },
-      };
-    });
+      }),
+    );
+    const tableQuery = vi
+      .fn<typeof listPlayers>()
+      .mockImplementation(async (requestedPage) => {
+        const response = responses[requestedPage - 1];
+        if (!response) throw new Error('Unexpected player page');
+        return response;
+      });
+    vi.mocked(listPlayers).mockImplementation(
+      (requestedPage, filters = {}, limit = 10) => {
+        if (limit === 1) {
+          const total = filters.free === true ? 0 : 23;
+          return Promise.resolve({
+            data: filters.free === true ? [] : [responses[0].data[0]],
+            meta: { page: 1, limit: 1, total_items: total, total_pages: total },
+          });
+        }
+        return tableQuery(requestedPage, filters, limit);
+      },
+    );
+
+    async function expectPage(
+      currentPage: number,
+      summary: string,
+      expectedNames: string[],
+    ) {
+      expect(await screen.findByText(summary)).toBeInTheDocument();
+      const table = screen.getByRole('table', { name: 'Jogadores' });
+      const rows = within(table).getAllByRole('row').slice(1);
+      expect(rows).toHaveLength(expectedNames.length);
+      expectedNames.forEach((name, index) => {
+        expect(
+          within(rows[index]).getByText(name, { exact: true }),
+        ).toBeInTheDocument();
+      });
+      for (const number of [1, 2, 3]) {
+        const button = screen.getByRole('button', { name: `Página ${number}` });
+        if (number === currentPage) {
+          expect(button).toHaveAttribute('aria-current', 'page');
+        } else {
+          expect(button).not.toHaveAttribute('aria-current');
+        }
+      }
+    }
+
     const user = userEvent.setup();
     renderApp();
 
-    expect(
-      await screen.findByText('Mostrando 1–10 de 23 jogadores'),
-    ).toBeInTheDocument();
+    await expectPage(1, 'Mostrando 1–10 de 23 jogadores', namesByPage[0]);
     expect(screen.getByRole('button', { name: 'Anterior' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Próxima' })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: 'Próxima' }));
 
-    expect(
-      await screen.findByText('Mostrando 11–20 de 23 jogadores'),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('table', { name: 'Jogadores' })).toHaveTextContent(
-      'João Silva',
-    );
+    await expectPage(2, 'Mostrando 11–20 de 23 jogadores', namesByPage[1]);
+    expect(screen.getByRole('button', { name: 'Anterior' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Próxima' })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: 'Página 3' }));
 
-    expect(
-      await screen.findByText('Mostrando 21–23 de 23 jogadores'),
-    ).toBeInTheDocument();
-    expect(
-      within(screen.getByRole('table', { name: 'Jogadores' })).getAllByRole(
-        'row',
-      ),
-    ).toHaveLength(4);
+    await expectPage(3, 'Mostrando 21–23 de 23 jogadores', namesByPage[2]);
+    expect(screen.getByRole('button', { name: 'Anterior' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Próxima' })).toBeDisabled();
-    expect(listPlayers).toHaveBeenNthCalledWith(1, 1);
-    expect(listPlayers).toHaveBeenNthCalledWith(2, 2);
-    expect(listPlayers).toHaveBeenNthCalledWith(3, 3);
+    await user.click(screen.getByRole('button', { name: 'Anterior' }));
+
+    await expectPage(2, 'Mostrando 11–20 de 23 jogadores', namesByPage[1]);
+    expect(screen.getByRole('button', { name: 'Anterior' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Próxima' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: 'Anterior' }));
+
+    await expectPage(1, 'Mostrando 1–10 de 23 jogadores', namesByPage[0]);
+    expect(screen.getByRole('button', { name: 'Anterior' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Próxima' })).toBeEnabled();
+    for (const number of [1, 2, 3]) {
+      expect(tableQuery).toHaveBeenCalledWith(number, {}, 10);
+    }
+    for (const [requestedPage, filters, limit] of tableQuery.mock.calls) {
+      expect([1, 2, 3]).toContain(requestedPage);
+      expect(filters).toEqual({});
+      expect(limit).toBe(10);
+    }
   });
 });
