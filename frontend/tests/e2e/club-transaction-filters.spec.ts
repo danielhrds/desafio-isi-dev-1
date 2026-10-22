@@ -138,7 +138,7 @@ const emptyTransactions: ClubTransactionsResponse = {
   },
 };
 
-const exportFilename = 'club-1-vendas-nando.csv';
+const exportFilename = 'club-1-transactions.csv';
 const exportCsv =
   'data_hora;tipo;jogador;valor;taxa_ou_comissao;multa;lucro;variacao_caixa\n' +
   '2026-09-18T21:15:00-03:00;VENDA;Nando Lira;30,00;0,75;0,75;-4,00;28,50\n';
@@ -751,7 +751,6 @@ for (const viewport of viewports) {
           body: exportCsv,
           headers: {
             'Content-Type': 'text/csv; charset=utf-8',
-            'Content-Disposition': `attachment; filename="${exportFilename}"`,
           },
         });
         return true;
