@@ -57,6 +57,17 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/api/v1/**', async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith('/players')) {
+      if (url.searchParams.get('limit') === '1') {
+        const free = url.searchParams.get('free');
+        const total = free === 'true' ? 7 : free === 'false' ? 16 : 23;
+        await route.fulfill({
+          json: {
+            data: [free === 'true' ? players[4] : players[0]],
+            meta: { page: 1, limit: 1, total_items: total, total_pages: total },
+          },
+        });
+        return;
+      }
       await route.fulfill({
         json: {
           data: players,
@@ -97,27 +108,190 @@ test('J01 desktop list renders API data and its first page', async ({
   });
 });
 
-test('J01 stays within a 375px viewport and opens the mobile sidebar', async ({
+test('F5 keeps the players table, menus and create dialog usable at 375px', async ({
   page,
 }, testInfo) => {
+  const mutationRequests: string[] = [];
+  page.on('request', (request) => {
+    if (
+      new URL(request.url()).pathname.startsWith('/api/v1/') &&
+      request.method() !== 'GET'
+    ) {
+      mutationRequests.push(`${request.method()} ${request.url()}`);
+    }
+  });
+  // This scenario only opens and cancels controls; never forward a mutation.
+  await page.route('**/api/v1/**', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.abort();
+      return;
+    }
+    await route.fallback();
+  });
+
+  async function expectNoPageOverflow() {
+    expect(
+      await page.evaluate(() => ({
+        documentWidth: document.documentElement.scrollWidth,
+        bodyWidth: document.body.scrollWidth,
+        scrollX: window.scrollX,
+      })),
+    ).toEqual({ documentWidth: 375, bodyWidth: 375, scrollX: 0 });
+  }
+
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/jogadores');
 
   await expect(page.getByRole('heading', { name: 'Jogadores' })).toBeVisible();
-  await expect(page.getByRole('table', { name: 'Jogadores' })).toBeVisible();
-  expect(
-    await page.evaluate(() => document.documentElement.scrollWidth),
-  ).toBeLessThanOrEqual(375);
+  const table = page.getByRole('table', { name: 'Jogadores', exact: true });
+  await expect(table).toBeVisible();
+  await expectNoPageOverflow();
   await page.screenshot({
     path: testInfo.outputPath('j01-mobile.png'),
     fullPage: true,
   });
 
   await page.getByRole('button', { name: 'Alternar menu' }).click();
-  await expect(page.getByRole('link', { name: 'Jogadores' })).toBeVisible();
-
+  const sidebar = page.getByRole('dialog', { name: 'Sidebar', exact: true });
+  await expect(sidebar).toBeInViewport({ ratio: 1 });
+  const playersLink = sidebar.getByRole('link', { name: 'Jogadores' });
+  await expect(playersLink).toBeInViewport({ ratio: 1 });
+  await expect(playersLink).toHaveAttribute('href', '/jogadores');
+  await expectNoPageOverflow();
   await page.screenshot({
     path: testInfo.outputPath('j01-mobile-menu.png'),
     fullPage: true,
   });
+  await page.keyboard.press('Escape');
+  await expect(sidebar).not.toBeVisible();
+
+  const tableContainer = page
+    .locator('[data-slot="table-container"]')
+    .filter({ has: table });
+  const tableSize = await tableContainer.evaluate((element) => ({
+    width: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    overflowX: getComputedStyle(element).overflowX,
+    scrollLeft: element.scrollLeft,
+  }));
+  expect(tableSize.width).toBeLessThanOrEqual(375);
+  expect(tableSize.scrollWidth).toBeGreaterThan(tableSize.width);
+  expect(tableSize.overflowX).toMatch(/auto|scroll/);
+  expect(tableSize.scrollLeft).toBe(0);
+  await tableContainer.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+  });
+  expect(
+    await tableContainer.evaluate((element) => element.scrollLeft),
+  ).toBeGreaterThan(0);
+
+  const freePlayerRow = table
+    .getByRole('row')
+    .filter({ hasText: 'Eduardo Paiva' });
+  const actions = freePlayerRow.getByRole('button', {
+    name: 'Abrir ações de Eduardo Paiva',
+  });
+  await actions.scrollIntoViewIfNeeded();
+  await expect(actions).toBeInViewport({ ratio: 1 });
+  await expect(
+    freePlayerRow.getByRole('button', { name: 'Comprar', exact: true }),
+  ).toBeInViewport({ ratio: 1 });
+  await expectNoPageOverflow();
+  await actions.click();
+  const menu = page.getByRole('menu');
+  await expect(menu).toBeInViewport({ ratio: 1 });
+  for (const name of [
+    'Ver detalhes',
+    'Editar',
+    'Alterar condição',
+    'Comprar',
+    'Excluir',
+  ]) {
+    const item = menu.getByRole('menuitem', { name, exact: true });
+    await expect(item).toBeEnabled();
+    await expect(item).toBeInViewport({ ratio: 1 });
+  }
+  await expectNoPageOverflow();
+  await page.screenshot({
+    path: testInfo.outputPath('j08-mobile-actions.png'),
+  });
+  await page.keyboard.press('Escape');
+  await expect(menu).not.toBeVisible();
+
+  await page.getByRole('button', { name: 'Novo jogador', exact: true }).click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Novo jogador',
+    exact: true,
+  });
+  await expect(dialog).toBeInViewport({ ratio: 1 });
+  const formBody = dialog.locator('form > div').first();
+  const formSize = await formBody.evaluate((element) => ({
+    height: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+    width: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(formSize.scrollHeight).toBeGreaterThan(formSize.height);
+  expect(formSize.scrollWidth).toBeLessThanOrEqual(formSize.width);
+  const documentScrollY = await page.evaluate(() => window.scrollY);
+  const nameInput = dialog.getByRole('textbox', { name: 'Nome', exact: true });
+  await nameInput.fill('Davi Melo');
+  await expect(nameInput).toHaveValue('Davi Melo');
+  for (const name of [
+    'GOL Goleiro',
+    'ZAG Zagueiro',
+    'LAT Lateral',
+    'MEI Meio-campo',
+    'ATA Atacante',
+  ]) {
+    const position = dialog.getByRole('button', { name, exact: true });
+    await position.scrollIntoViewIfNeeded();
+    await expect(position).toBeInViewport({ ratio: 1 });
+  }
+  for (const name of [
+    'Idade',
+    'Agilidade',
+    'Velocidade',
+    'Finalização',
+    'Passe',
+    'Drible',
+    'Defesa',
+    'Físico',
+    'Potencial',
+  ]) {
+    const input = dialog.getByRole('spinbutton', { name, exact: true });
+    await input.scrollIntoViewIfNeeded();
+    await expect(input).toBeInViewport({ ratio: 1 });
+    await expect(input).toBeEditable();
+  }
+  const potential = dialog.getByRole('spinbutton', {
+    name: 'Potencial',
+    exact: true,
+  });
+  await potential.fill('82');
+  await expect(potential).toHaveValue('82');
+  expect(
+    await formBody.evaluate((element) => element.scrollTop),
+  ).toBeGreaterThan(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(documentScrollY);
+  const cancel = dialog.getByRole('button', { name: 'Cancelar', exact: true });
+  const save = dialog.getByRole('button', {
+    name: 'Salvar jogador',
+    exact: true,
+  });
+  await expect(cancel).toBeInViewport({ ratio: 1 });
+  await expect(save).toBeInViewport({ ratio: 1 });
+  await expect(save).toBeEnabled();
+  await expect(
+    dialog.getByRole('button', { name: 'Fechar', exact: true }),
+  ).toBeInViewport({ ratio: 1 });
+  await expectNoPageOverflow();
+  await page.screenshot({ path: testInfo.outputPath('j05-mobile-create.png') });
+  await cancel.click();
+  await expect(dialog).not.toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Novo jogador', exact: true }),
+  ).toBeInViewport({ ratio: 1 });
+  await expectNoPageOverflow();
+  expect(mutationRequests).toEqual([]);
 });
