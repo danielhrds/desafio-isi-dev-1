@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { AxiosHeaders, type AxiosResponse } from 'axios';
+import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { apiClient } from '../services/api-client.js';
@@ -110,6 +110,15 @@ function responseWith<T>(data: T): AxiosResponse<T> {
     headers: {},
     config: { headers: new AxiosHeaders() },
   };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+
+  return { promise, resolve };
 }
 
 function renderPage() {
@@ -240,6 +249,127 @@ describe('F05/F07 club listing', () => {
         .filter(([url, config]) => url === '/clubs' && sortFromConfig(config))
         .map(([, config]) => sortFromConfig(config)),
     ).toEqual(['name', 'net_worth_desc', 'net_worth_asc']);
+  });
+});
+
+describe('F3 club listing states', () => {
+  it('shows a loading status until the summaries request settles', async () => {
+    const pendingSummaries = deferred<AxiosResponse<ClubSummary[]>>();
+    vi.spyOn(apiClient, 'get').mockImplementation(async (url, config) => {
+      if (url === '/players') return responseWith(playerPage);
+      if (url === '/clubs') {
+        return sortFromConfig(config) === 'name'
+          ? pendingSummaries.promise
+          : responseWith(clubs);
+      }
+
+      throw new Error(`Unexpected GET ${url}`);
+    });
+
+    renderPage();
+
+    expect(
+      await screen.findByRole('status', { name: 'Carregando clubes' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('table', { name: 'Clubes' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Nenhum clube cadastrado'),
+    ).not.toBeInTheDocument();
+
+    pendingSummaries.resolve(responseWith(clubLists.name));
+    expect(
+      await screen.findByRole('table', { name: 'Clubes' }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the empty state and its create-club action when the API returns no clubs', async () => {
+    vi.spyOn(apiClient, 'get').mockImplementation(async (url) => {
+      if (url === '/players') return responseWith(playerPage);
+      if (url === '/clubs') return responseWith([]);
+
+      throw new Error(`Unexpected GET ${url}`);
+    });
+
+    renderPage();
+
+    expect(
+      await screen.findByText('Nenhum clube cadastrado'),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Novo clube' })).toHaveLength(
+      2,
+    );
+    expect(
+      screen.queryByRole('table', { name: 'Clubes' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows the API error and retries the summaries request successfully', async () => {
+    const apiMessage = 'Serviço temporariamente indisponível.';
+    const errorResponse: AxiosResponse<{ message: string }> = {
+      ...responseWith({ message: apiMessage }),
+      status: 503,
+      statusText: 'Service Unavailable',
+    };
+    const apiError = new AxiosError<{ message: string }>(
+      'Request failed',
+      undefined,
+      undefined,
+      undefined,
+      errorResponse,
+    );
+    const get = vi
+      .spyOn(apiClient, 'get')
+      .mockImplementation(async (url, config) => {
+        if (url === '/players') return responseWith(playerPage);
+        if (url === '/clubs') {
+          if (sortFromConfig(config) !== 'name') return responseWith(clubs);
+
+          const summaryRequests = get.mock.calls.filter(
+            ([requestUrl, requestConfig]) =>
+              requestUrl === '/clubs' &&
+              sortFromConfig(requestConfig) === 'name',
+          ).length;
+
+          if (summaryRequests === 1) throw apiError;
+          return responseWith(clubLists.name);
+        }
+
+        throw new Error(`Unexpected GET ${url}`);
+      });
+    const user = userEvent.setup();
+
+    renderPage();
+
+    expect(
+      await screen.findByText(apiMessage, { exact: true }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Tentar novamente' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Nenhum clube cadastrado'),
+    ).not.toBeInTheDocument();
+    expect(
+      get.mock.calls.filter(
+        ([url, config]) =>
+          url === '/clubs' && sortFromConfig(config) === 'name',
+      ),
+    ).toHaveLength(1);
+
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+    expect(
+      await screen.findByRole('table', { name: 'Clubes' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('row', { name: /Delta FC/ })).toBeInTheDocument();
+    expect(
+      get.mock.calls.filter(
+        ([url, config]) =>
+          url === '/clubs' && sortFromConfig(config) === 'name',
+      ),
+    ).toHaveLength(2);
   });
 });
 
