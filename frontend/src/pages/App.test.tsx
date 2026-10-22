@@ -241,9 +241,23 @@ describe('F01 player list screen', () => {
   });
 
   it('retries the club lookup when player data is already loaded', async () => {
-    vi.mocked(listPlayers).mockResolvedValue(page);
+    const tableQuery = vi.fn<typeof listPlayers>().mockResolvedValue(page);
+    vi.mocked(listPlayers).mockImplementation(
+      (requestedPage, filters = {}, limit = 10) => {
+        if (limit === 1) {
+          const total = filters.free === undefined ? 2 : 1;
+          return Promise.resolve({
+            data: [filters.free === true ? page.data[1] : page.data[0]],
+            meta: { page: 1, limit: 1, total_items: total, total_pages: total },
+          });
+        }
+        return tableQuery(requestedPage, filters, limit);
+      },
+    );
     vi.mocked(listClubs)
-      .mockRejectedValueOnce(new Error('Network unavailable'))
+      .mockRejectedValueOnce(
+        new AxiosError('Network unavailable', 'ERR_NETWORK'),
+      )
       .mockResolvedValueOnce([{ id: 7, name: 'Águias FC', acronym: 'AGU' }]);
     const user = userEvent.setup();
     renderApp();
@@ -251,15 +265,39 @@ describe('F01 player list screen', () => {
     expect(
       await screen.findByText('Não foi possível carregar os jogadores'),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText('Verifique a conexão e tente novamente.', {
+        exact: true,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Nenhum jogador encontrado'),
+    ).not.toBeInTheDocument();
+    expect(tableQuery).toHaveBeenCalledExactlyOnceWith(1, {}, 10);
+    expect(listClubs).toHaveBeenCalledTimes(1);
+    const initialPlayerRequests = [...vi.mocked(listPlayers).mock.calls];
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
 
+    const table = await screen.findByRole('table', { name: 'Jogadores' });
+    const assignedPlayer = within(table).getByRole('row', { name: /Meia Lua/ });
+    const freePlayer = within(table).getByRole('row', { name: /João Silva/ });
     expect(
-      await within(screen.getByRole('table', { name: 'Jogadores' })).findByText(
-        'Águias FC',
-      ),
+      within(assignedPlayer).getByText('Águias FC', { exact: true }),
     ).toBeInTheDocument();
+    expect(within(freePlayer).getByText('Livre')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Não foi possível carregar os jogadores'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Verifique a conexão e tente novamente.'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Tentar novamente' }),
+    ).not.toBeInTheDocument();
     expect(listClubs).toHaveBeenCalledTimes(2);
-    expect(listPlayers).toHaveBeenCalledTimes(1);
+    expect(tableQuery).toHaveBeenCalledExactlyOnceWith(1, {}, 10);
+    expect(vi.mocked(listPlayers).mock.calls).toEqual(initialPlayerRequests);
   });
 
   it('navigates through 10-item pages using the API meta, including the short last page', async () => {
