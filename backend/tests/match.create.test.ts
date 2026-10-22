@@ -464,6 +464,7 @@ test('RN20/B21: clube inexistente e escalação incompleta geram 404/409 sem efe
     const response = await post(homeId, awayId);
     expect(response.status).toBe(status);
     expect(response.body.message).toEqual(expect.any(String));
+    if (status === 409) expect(response.body.club_id).toBe(away.id);
     expect(await counts()).toEqual({ matches: 0, duels: 0 });
   }
 });
