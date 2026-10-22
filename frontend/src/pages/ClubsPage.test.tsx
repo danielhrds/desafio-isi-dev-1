@@ -517,6 +517,69 @@ describe('F05 club creation', () => {
     expect(post).not.toHaveBeenCalled();
   });
 
+  it('shows the exact API message when club creation is rejected', async () => {
+    const apiMessage = 'Já existe um clube com o nome "Águias FC".';
+    const errorResponse: AxiosResponse<{ message: string }> = {
+      ...responseWith({ message: apiMessage }),
+      status: 409,
+      statusText: 'Conflict',
+    };
+    const apiError = new AxiosError<{ message: string }>(
+      'Request failed',
+      undefined,
+      undefined,
+      undefined,
+      errorResponse,
+    );
+    const get = vi
+      .spyOn(apiClient, 'get')
+      .mockImplementation(async (url, config) => {
+        if (url === '/players') return responseWith(playerPage);
+        if (url === '/clubs') {
+          return responseWith(
+            sortFromConfig(config) === 'name' ? clubLists.name : clubs,
+          );
+        }
+
+        throw new Error(`Unexpected GET ${url}`);
+      });
+    const post = vi.spyOn(apiClient, 'post').mockRejectedValue(apiError);
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByRole('table', { name: 'Clubes' });
+    await waitFor(() =>
+      expect(get.mock.calls.filter(([url]) => url === '/clubs')).toHaveLength(
+        2,
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: 'Novo clube' }));
+    await user.type(screen.getByRole('textbox', { name: 'Nome' }), 'Águias FC');
+    await user.type(screen.getByRole('textbox', { name: 'Sigla' }), 'AGU');
+    await user.click(screen.getByRole('button', { name: 'Criar clube' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(
+      within(alert).getByText('Não foi possível criar o clube'),
+    ).toBeInTheDocument();
+    expect(
+      within(alert).getByText(apiMessage, { exact: true }),
+    ).toBeInTheDocument();
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenCalledWith('/clubs', {
+      name: 'Águias FC',
+      acronym: 'AGU',
+    });
+    expect(
+      screen.getByRole('dialog', { name: 'Novo clube' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Nome' })).toHaveValue(
+      'Águias FC',
+    );
+    expect(screen.getByRole('textbox', { name: 'Sigla' })).toHaveValue('AGU');
+    expect(get.mock.calls.filter(([url]) => url === '/clubs')).toHaveLength(2);
+  });
+
   it('creates one club on double click and refreshes the list from API data', async () => {
     const createdClub: ClubSummary = {
       id: 4,
