@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 import type { ClubDetail, ClubLineup, ClubSummary } from '../../src/types/club';
 import type { PlayerListResponse } from '../../src/types/player';
 import type {
@@ -137,6 +138,11 @@ const emptyTransactions: ClubTransactionsResponse = {
   },
 };
 
+const exportFilename = 'club-1-vendas-nando.csv';
+const exportCsv =
+  'data_hora;tipo;jogador;valor;taxa_ou_comissao;multa;lucro;variacao_caixa\n' +
+  '2026-09-18T21:15:00-03:00;VENDA;Nando Lira;30,00;0,75;0,75;-4,00;28,50\n';
+
 const deletedPlayerMessage = 'Jogador não encontrado.';
 
 interface TransactionRead {
@@ -144,10 +150,16 @@ interface TransactionRead {
   playerId: string | null;
 }
 
+interface TransactionExportRead extends TransactionRead {
+  method: string;
+  body: string | null;
+}
+
 type TransactionRouteHandler = (
   route: Route,
   requestNumber: number,
 ) => Promise<boolean>;
+type ExportRouteHandler = TransactionRouteHandler;
 
 const viewports = [
   { label: 'desktop', width: 1366, height: 768 },
@@ -157,8 +169,10 @@ const viewports = [
 async function mockClubApi(
   page: Page,
   transactionRouteHandler?: TransactionRouteHandler,
+  exportRouteHandler?: ExportRouteHandler,
 ) {
   const transactionReads: TransactionRead[] = [];
+  const transactionExports: TransactionExportRead[] = [];
   const unexpectedRequests: string[] = [];
 
   await page.route('**/api/v1/**', async (route) => {
@@ -188,6 +202,36 @@ async function mockClubApi(
       url.pathname === `/api/v1/clubs/${club.id}/lineup`
     ) {
       await route.fulfill({ json: lineup });
+      return;
+    }
+
+    if (
+      request.method() === 'GET' &&
+      url.pathname === `/api/v1/clubs/${club.id}/transactions/export`
+    ) {
+      const type = url.searchParams.get('type');
+      const playerId = url.searchParams.get('player_id');
+      transactionExports.push({
+        type,
+        playerId,
+        method: request.method(),
+        body: request.postData(),
+      });
+
+      if (
+        exportRouteHandler &&
+        (await exportRouteHandler(route, transactionExports.length))
+      ) {
+        return;
+      }
+
+      unexpectedRequests.push(
+        `${request.method()} ${url.pathname}${url.search}`,
+      );
+      await route.fulfill({
+        status: 404,
+        json: { message: 'Unexpected API route' },
+      });
       return;
     }
 
@@ -237,7 +281,7 @@ async function mockClubApi(
     });
   });
 
-  return { transactionReads, unexpectedRequests };
+  return { transactionReads, transactionExports, unexpectedRequests };
 }
 
 async function openHistoryTab(page: Page) {
@@ -677,6 +721,163 @@ for (const viewport of viewports) {
       if (viewport.width === 375) {
         await expectHistoryTableScrollInside(page);
       }
+      await expectNoPageOverflow(page, viewport.width);
+    },
+  );
+}
+
+for (const viewport of viewports) {
+  test(
+    'exporta o CSV da API com filtros, uma requisição e feedback de sucesso em ' +
+      viewport.label,
+    async ({ page }) => {
+      await page.setViewportSize({
+        width: viewport.width,
+        height: viewport.height,
+      });
+      let releaseExport!: () => void;
+      let notifyExportRequest!: () => void;
+      const pendingExport = new Promise<void>((resolve) => {
+        releaseExport = resolve;
+      });
+      const exportRequestStarted = new Promise<void>((resolve) => {
+        notifyExportRequest = resolve;
+      });
+      const api = await mockClubApi(page, undefined, async (route, number) => {
+        if (number === 1) notifyExportRequest();
+        await pendingExport;
+        await route.fulfill({
+          status: 200,
+          body: exportCsv,
+          headers: {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': `attachment; filename="${exportFilename}"`,
+          },
+        });
+        return true;
+      });
+      let documentNavigations = 0;
+      page.on('request', (request) => {
+        if (
+          request.isNavigationRequest() &&
+          request.frame() === page.mainFrame()
+        ) {
+          documentNavigations += 1;
+        }
+      });
+
+      await openHistory(page);
+      const initialNavigationCount = documentNavigations;
+      await page.getByRole('button', { name: 'Filtrar por compra' }).click();
+      await page.getByRole('combobox', { name: 'Filtrar por jogador' }).click();
+      await page.getByRole('option', { name: 'Nando Lira' }).click();
+
+      const downloadPromise = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Exportar CSV' }).dblclick();
+      await exportRequestStarted;
+      try {
+        await expect(
+          page.getByRole('button', { name: 'Exportando…' }),
+        ).toBeDisabled();
+        expect(api.transactionExports).toEqual([
+          {
+            type: 'VENDA',
+            playerId: '8',
+            method: 'GET',
+            body: null,
+          },
+        ]);
+      } finally {
+        releaseExport();
+      }
+
+      const download = await downloadPromise;
+      expect(download.suggestedFilename()).toBe(exportFilename);
+      const downloadedFile = await download.path();
+      if (!downloadedFile) throw new Error('O arquivo CSV não foi salvo.');
+      expect(await readFile(downloadedFile, 'utf8')).toBe(exportCsv);
+      const toast = page.locator('[data-sonner-toast]');
+      await expect(
+        toast.getByText('CSV baixado', { exact: true }),
+      ).toBeVisible();
+      await expect(
+        toast.getByText(`${exportFilename}, com os filtros aplicados.`, {
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Exportar CSV' }),
+      ).toBeEnabled();
+      expect(api.transactionExports).toHaveLength(1);
+      expect(api.unexpectedRequests).toEqual([]);
+      expect(documentNavigations).toBe(initialNavigationCount);
+      await expectNoPageOverflow(page, viewport.width);
+    },
+  );
+}
+
+for (const viewport of viewports) {
+  test(
+    'mostra o message exato da API quando a exportação é recusada em ' +
+      viewport.label,
+    async ({ page }) => {
+      await page.setViewportSize({
+        width: viewport.width,
+        height: viewport.height,
+      });
+      const api = await mockClubApi(page, undefined, async (route) => {
+        await route.fulfill({
+          status: 404,
+          json: { message: deletedPlayerMessage },
+        });
+        return true;
+      });
+      let documentNavigations = 0;
+      let downloadCount = 0;
+      page.on('request', (request) => {
+        if (
+          request.isNavigationRequest() &&
+          request.frame() === page.mainFrame()
+        ) {
+          documentNavigations += 1;
+        }
+      });
+      page.on('download', () => {
+        downloadCount += 1;
+      });
+
+      await openHistory(page);
+      const initialNavigationCount = documentNavigations;
+      await page.getByRole('combobox', { name: 'Filtrar por jogador' }).click();
+      await page.getByRole('option', { name: 'Guto Prado' }).click();
+      await expect(
+        page.getByText(deletedPlayerMessage, { exact: true }),
+      ).toBeVisible();
+
+      await page.getByRole('button', { name: 'Exportar CSV' }).click();
+      const toast = page.locator('[data-sonner-toast]');
+      await expect(
+        toast.getByText('Não foi possível exportar o histórico', {
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        toast.getByText(deletedPlayerMessage, { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Exportar CSV' }),
+      ).toBeEnabled();
+      expect(api.transactionExports).toEqual([
+        {
+          type: 'COMPRA,VENDA',
+          playerId: '4',
+          method: 'GET',
+          body: null,
+        },
+      ]);
+      expect(downloadCount).toBe(0);
+      expect(api.unexpectedRequests).toEqual([]);
+      expect(documentNavigations).toBe(initialNavigationCount);
       await expectNoPageOverflow(page, viewport.width);
     },
   );
