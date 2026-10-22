@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   BadgePercent,
@@ -471,6 +471,7 @@ export function ClubTransactionHistory({ clubId }: { clubId: number }) {
     'VENDA',
   ]);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('all');
+  const exportInFlight = useRef(false);
 
   const typeFilter: ClubTransactionFilters['type'] =
     selectedTypes.length === 2 ? 'COMPRA,VENDA' : selectedTypes[0];
@@ -519,6 +520,9 @@ export function ClubTransactionHistory({ clubId }: { clubId: number }) {
   }
 
   async function handleExport() {
+    if (exportInFlight.current) return;
+    exportInFlight.current = true;
+
     try {
       const exported = await exportMutation.mutateAsync({ clubId, filters });
       downloadFile(exported.file, exported.filename);
@@ -529,6 +533,8 @@ export function ClubTransactionHistory({ clubId }: { clubId: number }) {
       toast.error('Não foi possível exportar o histórico', {
         description: await getExportErrorMessage(error),
       });
+    } finally {
+      exportInFlight.current = false;
     }
   }
 
