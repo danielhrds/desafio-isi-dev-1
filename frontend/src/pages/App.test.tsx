@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AxiosError, AxiosHeaders } from 'axios';
 import { MemoryRouter } from 'react-router-dom';
@@ -193,24 +193,51 @@ describe('F01 player list screen', () => {
         config: { headers: new AxiosHeaders() },
       },
     );
-    vi.mocked(listPlayers)
+    const tableQuery = vi
+      .fn<typeof listPlayers>()
       .mockRejectedValueOnce(error)
       .mockResolvedValueOnce(page);
+    vi.mocked(listPlayers).mockImplementation(
+      (requestedPage, filters = {}, limit = 10) => {
+        if (limit === 1) {
+          const total = filters.free === undefined ? 2 : 1;
+          return Promise.resolve({
+            data: [filters.free === true ? page.data[1] : page.data[0]],
+            meta: { page: 1, limit: 1, total_items: total, total_pages: total },
+          });
+        }
+        return tableQuery(requestedPage, filters, limit);
+      },
+    );
     const user = userEvent.setup();
     renderApp();
 
     expect(
-      await screen.findByText('Falha ao consultar jogadores'),
+      await screen.findByText('Falha ao consultar jogadores', { exact: true }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Nenhum jogador encontrado'),
+    ).not.toBeInTheDocument();
+    expect(tableQuery).toHaveBeenCalledExactlyOnceWith(1, {}, 10);
+    expect(listClubs).toHaveBeenCalledTimes(1);
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
 
-    await waitFor(() =>
-      expect(
-        screen.getByRole('table', { name: 'Jogadores' }),
-      ).toBeInTheDocument(),
-    );
-    expect(listPlayers).toHaveBeenCalledTimes(2);
+    const table = await screen.findByRole('table', { name: 'Jogadores' });
+    expect(within(table).getAllByRole('row')).toHaveLength(3);
+    expect(within(table).getByText('Meia Lua')).toBeInTheDocument();
+    expect(within(table).getByText('João Silva')).toBeInTheDocument();
+    expect(within(table).getByText('Águias FC')).toBeInTheDocument();
+    expect(within(table).getByText('37,00')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Falha ao consultar jogadores'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Tentar novamente' }),
+    ).not.toBeInTheDocument();
+    expect(tableQuery).toHaveBeenCalledTimes(2);
+    expect(tableQuery).toHaveBeenNthCalledWith(2, 1, {}, 10);
+    expect(listClubs).toHaveBeenCalledTimes(1);
   });
 
   it('retries the club lookup when player data is already loaded', async () => {
