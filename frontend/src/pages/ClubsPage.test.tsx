@@ -517,6 +517,53 @@ describe('F05 club creation', () => {
     expect(post).not.toHaveBeenCalled();
   });
 
+  it('shows the exact API message for a valid-format acronym that does not match the club name', async () => {
+    const apiMessage = 'A sigla não corresponde às iniciais do nome.';
+    const errorResponse: AxiosResponse<{ message: string }> = {
+      ...responseWith({ message: apiMessage }),
+      status: 400,
+      statusText: 'Bad Request',
+    };
+    const apiError = new AxiosError<{ message: string }>(
+      'Request failed',
+      undefined,
+      undefined,
+      undefined,
+      errorResponse,
+    );
+    vi.spyOn(apiClient, 'get').mockImplementation(async (url, config) => {
+      if (url === '/players') return responseWith(playerPage);
+      if (url === '/clubs') {
+        return responseWith(
+          sortFromConfig(config) === 'name' ? clubLists.name : clubs,
+        );
+      }
+
+      throw new Error(`Unexpected GET ${url}`);
+    });
+    const post = vi.spyOn(apiClient, 'post').mockRejectedValue(apiError);
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByRole('table', { name: 'Clubes' });
+    await user.click(screen.getByRole('button', { name: 'Novo clube' }));
+    await user.type(
+      screen.getByRole('textbox', { name: 'Nome' }),
+      'Leões da Serra',
+    );
+    await user.type(screen.getByRole('textbox', { name: 'Sigla' }), 'XYZ');
+    await user.click(screen.getByRole('button', { name: 'Criar clube' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByText(apiMessage, { exact: true })).toBeVisible();
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenCalledWith('/clubs', {
+      name: 'Leões da Serra',
+      acronym: 'XYZ',
+    });
+    expect(screen.getByRole('dialog', { name: 'Novo clube' })).toBeVisible();
+  });
+
   it('shows the exact API message when club creation is rejected', async () => {
     const apiMessage = 'Já existe um clube com o nome "Águias FC".';
     const errorResponse: AxiosResponse<{ message: string }> = {
