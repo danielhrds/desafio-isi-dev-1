@@ -324,3 +324,47 @@ for (const viewport of viewports) {
     await expectNoHorizontalPageOverflow(page, viewport.width);
   });
 }
+
+for (const viewport of viewports) {
+  test(`cancela a confirmação sem enviar a venda em ${viewport.label}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({
+      width: viewport.width,
+      height: viewport.height,
+    });
+    const api = await mockSaleApi(page);
+    let mainFrameNavigations = 0;
+    page.on('request', (request) => {
+      if (
+        request.isNavigationRequest() &&
+        request.frame() === page.mainFrame()
+      ) {
+        mainFrameNavigations += 1;
+      }
+    });
+
+    await page.goto(`/clubes/${club.id}`);
+    await expect(page.getByRole('heading', { name: club.name })).toBeVisible();
+    const initialNavigationCount = mainFrameNavigations;
+    const sellButton = page.getByRole('button', {
+      name: `Vender ${player.name}`,
+    });
+    await expect(sellButton).toBeVisible();
+    await sellButton.click();
+
+    const dialog = page.getByRole('dialog', { name: `Vender ${player.name}?` });
+    await expect(dialog).toBeVisible();
+    const cancel = dialog.getByRole('button', { name: 'Cancelar' });
+    await expect(cancel).toBeEnabled();
+    await cancel.click();
+
+    await expect(dialog).not.toBeVisible();
+    await expect(sellButton).toBeVisible();
+    await page.waitForLoadState('networkidle');
+    expect(api.saleRequests).toEqual([]);
+    expect(api.unexpectedRequests).toEqual([]);
+    expect(mainFrameNavigations).toBe(initialNavigationCount);
+    await expectNoHorizontalPageOverflow(page, viewport.width);
+  });
+}
