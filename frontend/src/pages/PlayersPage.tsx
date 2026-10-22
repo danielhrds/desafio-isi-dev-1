@@ -206,7 +206,7 @@ export function PlayersPage() {
               <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
                 <SearchX aria-hidden="true" className="size-5" />
               </div>
-              <p className="font-semibold">
+              <p className="max-w-full font-semibold [overflow-wrap:anywhere]">
                 {filters.search
                   ? `Nenhum jogador encontrado para “${filters.search}”`
                   : 'Nenhum jogador encontrado'}

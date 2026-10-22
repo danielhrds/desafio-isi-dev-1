@@ -235,13 +235,16 @@ function FilterChip({
   onRemove: () => void;
 }) {
   return (
-    <Badge variant="secondary" className="gap-1 rounded-full px-2 font-normal">
-      {label}
+    <Badge
+      variant="secondary"
+      className="max-w-full gap-1 rounded-full px-2 font-normal"
+    >
+      <span className="min-w-0 truncate">{label}</span>
       <Button
         type="button"
         variant="ghost"
         size="icon-xs"
-        className="size-4 rounded-full"
+        className="size-4 shrink-0 rounded-full"
         aria-label={`Remover filtro ${label}`}
         onClick={onRemove}
       >
