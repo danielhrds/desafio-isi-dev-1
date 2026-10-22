@@ -310,6 +310,23 @@ async function expectHistoryLoadingScrollInside(page: Page) {
   ).toBeGreaterThan(0);
 }
 
+async function expectTransactionSummary(
+  page: Page,
+  expected: readonly (readonly [string, string])[],
+) {
+  const summary = page
+    .getByRole('region', { name: 'Tabela e resumo do histórico de transações' })
+    .locator('[aria-label="Resumo das transações"]');
+
+  for (const [label, value] of expected) {
+    const item = summary
+      .getByText(label, { exact: true })
+      .locator('xpath=../..');
+    await item.scrollIntoViewIfNeeded();
+    await expect(item.getByText(value, { exact: true })).toBeVisible();
+  }
+}
+
 for (const viewport of viewports) {
   test(`exibe transações da API e combina filtros de tipo e jogador em ${viewport.label}`, async ({
     page,
@@ -439,6 +456,62 @@ for (const viewport of viewports) {
 
 for (const viewport of viewports) {
   test(
+    'mostra os totais do summary da API após aplicar filtros em ' +
+      viewport.label,
+    async ({ page }) => {
+      await page.setViewportSize({
+        width: viewport.width,
+        height: viewport.height,
+      });
+      const api = await mockClubApi(page);
+
+      await openHistory(page);
+      await expectTransactionSummary(page, [
+        ['Total pago em compras', '66,41'],
+        ['Total recebido em vendas', '82,66'],
+        ['Taxas e comissões', '4,44'],
+        ['Multas', '4,91'],
+        ['Lucro total', '+ 11,60'],
+      ]);
+
+      await page.getByRole('button', { name: 'Filtrar por compra' }).click();
+      await expectTransactionSummary(page, [
+        ['Total pago em compras', '0,00'],
+        ['Total recebido em vendas', '82,66'],
+        ['Taxas e comissões', '2,23'],
+        ['Multas', '4,91'],
+        ['Lucro total', '+ 11,60'],
+      ]);
+      expect(api.transactionReads).toContainEqual({
+        type: 'VENDA',
+        playerId: null,
+      });
+
+      await page.getByRole('combobox', { name: 'Filtrar por jogador' }).click();
+      await page.getByRole('option', { name: 'Nando Lira' }).click();
+      await expectTransactionSummary(page, [
+        ['Total pago em compras', '0,00'],
+        ['Total recebido em vendas', '28,50'],
+        ['Taxas e comissões', '0,75'],
+        ['Multas', '0,75'],
+        ['Lucro total', '- 4,00'],
+      ]);
+      expect(api.transactionReads).toContainEqual({
+        type: 'VENDA',
+        playerId: '8',
+      });
+      expect(api.unexpectedRequests).toEqual([]);
+
+      if (viewport.width === 375) {
+        await expectHistoryTableScrollInside(page);
+      }
+      await expectNoPageOverflow(page, viewport.width);
+    },
+  );
+}
+
+for (const viewport of viewports) {
+  test(
     'mantém o carregamento do histórico acessível em ' + viewport.label,
     async ({ page }) => {
       await page.setViewportSize({
@@ -528,6 +601,13 @@ for (const viewport of viewports) {
         name: 'Tabela e resumo do histórico de transações',
       });
       await expect(historyRegion).toBeVisible();
+      await expectTransactionSummary(page, [
+        ['Total pago em compras', '0,00'],
+        ['Total recebido em vendas', '0,00'],
+        ['Taxas e comissões', '0,00'],
+        ['Multas', '0,00'],
+        ['Lucro total', '0,00'],
+      ]);
       expect(api.transactionReads.length).toBeGreaterThan(0);
       expect(api.unexpectedRequests).toEqual([]);
 
