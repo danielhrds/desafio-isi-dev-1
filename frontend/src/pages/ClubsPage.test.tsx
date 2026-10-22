@@ -1,6 +1,12 @@
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios';
 import { MemoryRouter } from 'react-router-dom';
@@ -376,6 +382,141 @@ describe('F3 club listing states', () => {
 });
 
 describe('F05 club creation', () => {
+  it('shows required-field errors beside both inputs without sending a request', async () => {
+    vi.spyOn(apiClient, 'get').mockImplementation(async (url) => {
+      if (url === '/players') return responseWith(playerPage);
+      if (url === '/clubs') return responseWith(clubs);
+
+      throw new Error(`Unexpected GET ${url}`);
+    });
+    const post = vi
+      .spyOn(apiClient, 'post')
+      .mockRejectedValue(new Error('POST must not be sent'));
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByRole('table', { name: 'Clubes' });
+    await user.click(screen.getByRole('button', { name: 'Novo clube' }));
+    await user.click(screen.getByRole('button', { name: 'Criar clube' }));
+
+    const nameInput = screen.getByRole('textbox', { name: 'Nome' });
+    const acronymInput = screen.getByRole('textbox', { name: 'Sigla' });
+    expect(
+      await screen.findByText('Use pelo menos 3 caracteres.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('A sigla deve ter exatamente 3 letras.'),
+    ).toBeInTheDocument();
+    expect(nameInput).toHaveAttribute('aria-invalid', 'true');
+    expect(nameInput).toHaveAttribute(
+      'aria-describedby',
+      'create-club-name-error',
+    );
+    expect(acronymInput).toHaveAttribute('aria-invalid', 'true');
+    expect(acronymInput).toHaveAttribute(
+      'aria-describedby',
+      'create-club-acronym-error',
+    );
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('validates the club-name minimum and maximum lengths without sending a request', async () => {
+    vi.spyOn(apiClient, 'get').mockImplementation(async (url) => {
+      if (url === '/players') return responseWith(playerPage);
+      if (url === '/clubs') return responseWith(clubs);
+
+      throw new Error(`Unexpected GET ${url}`);
+    });
+    const post = vi
+      .spyOn(apiClient, 'post')
+      .mockRejectedValue(new Error('POST must not be sent'));
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByRole('table', { name: 'Clubes' });
+    await user.click(screen.getByRole('button', { name: 'Novo clube' }));
+
+    const nameInput = screen.getByRole('textbox', { name: 'Nome' });
+    const acronymInput = screen.getByRole('textbox', { name: 'Sigla' });
+    expect(nameInput).toHaveAttribute('maxLength', '60');
+    expect(acronymInput).toHaveAttribute('maxLength', '3');
+
+    fireEvent.change(nameInput, { target: { value: 'AB' } });
+    await user.type(acronymInput, 'ABC');
+    await user.click(screen.getByRole('button', { name: 'Criar clube' }));
+    expect(
+      await screen.findByText('Use pelo menos 3 caracteres.'),
+    ).toBeInTheDocument();
+    expect(post).not.toHaveBeenCalled();
+
+    fireEvent.change(nameInput, { target: { value: 'ABC' } });
+    await waitFor(() =>
+      expect(nameInput).toHaveAttribute('aria-invalid', 'false'),
+    );
+    expect(
+      screen.queryByText('Use pelo menos 3 caracteres.'),
+    ).not.toBeInTheDocument();
+
+    const sixtyCharacters = 'A'.repeat(60);
+    fireEvent.change(nameInput, { target: { value: sixtyCharacters } });
+    await waitFor(() =>
+      expect(nameInput).toHaveAttribute('aria-invalid', 'false'),
+    );
+    expect(nameInput).toHaveValue(sixtyCharacters);
+
+    fireEvent.change(nameInput, { target: { value: `${sixtyCharacters}A` } });
+    await user.click(screen.getByRole('button', { name: 'Criar clube' }));
+    expect(
+      await screen.findByText('Use no máximo 60 caracteres.'),
+    ).toBeInTheDocument();
+    expect(nameInput).toHaveAttribute(
+      'aria-describedby',
+      'create-club-name-error',
+    );
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('requires a three-letter uppercase acronym and associates its error with the input', async () => {
+    vi.spyOn(apiClient, 'get').mockImplementation(async (url) => {
+      if (url === '/players') return responseWith(playerPage);
+      if (url === '/clubs') return responseWith(clubs);
+
+      throw new Error(`Unexpected GET ${url}`);
+    });
+    const post = vi
+      .spyOn(apiClient, 'post')
+      .mockRejectedValue(new Error('POST must not be sent'));
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByRole('table', { name: 'Clubes' });
+    await user.click(screen.getByRole('button', { name: 'Novo clube' }));
+
+    const acronymInput = screen.getByRole('textbox', { name: 'Sigla' });
+    fireEvent.change(acronymInput, { target: { value: 'AB' } });
+    await user.click(screen.getByRole('button', { name: 'Criar clube' }));
+    expect(
+      await screen.findByText('A sigla deve ter exatamente 3 letras.'),
+    ).toBeInTheDocument();
+    expect(acronymInput).toHaveAttribute(
+      'aria-describedby',
+      'create-club-acronym-error',
+    );
+
+    fireEvent.change(acronymInput, { target: { value: 'abc' } });
+    await user.click(screen.getByRole('button', { name: 'Criar clube' }));
+    expect(
+      await screen.findByText('Use 3 letras maiúsculas de A a Z.'),
+    ).toBeInTheDocument();
+
+    fireEvent.change(acronymInput, { target: { value: 'ABCD' } });
+    await user.click(screen.getByRole('button', { name: 'Criar clube' }));
+    expect(
+      await screen.findByText('A sigla deve ter exatamente 3 letras.'),
+    ).toBeInTheDocument();
+    expect(post).not.toHaveBeenCalled();
+  });
+
   it('creates one club on double click and refreshes the list from API data', async () => {
     const createdClub: ClubSummary = {
       id: 4,
