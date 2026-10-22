@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Route } from '@playwright/test';
 import type { ClubDetail, ClubLineup, ClubSummary } from '../../src/types/club';
 import type { PlayerListResponse } from '../../src/types/player';
 import type {
@@ -126,6 +126,17 @@ const nandoSale: ClubTransactionsResponse = {
   },
 };
 
+const emptyTransactions: ClubTransactionsResponse = {
+  data: [],
+  summary: {
+    total_spent: 0,
+    total_received: 0,
+    total_fees: 0,
+    total_penalties: 0,
+    total_profit: 0,
+  },
+};
+
 const deletedPlayerMessage = 'Jogador não encontrado.';
 
 interface TransactionRead {
@@ -133,12 +144,20 @@ interface TransactionRead {
   playerId: string | null;
 }
 
+type TransactionRouteHandler = (
+  route: Route,
+  requestNumber: number,
+) => Promise<boolean>;
+
 const viewports = [
   { label: 'desktop', width: 1366, height: 768 },
   { label: '375 px', width: 375, height: 812 },
 ] as const;
 
-async function mockClubApi(page: Page) {
+async function mockClubApi(
+  page: Page,
+  transactionRouteHandler?: TransactionRouteHandler,
+) {
   const transactionReads: TransactionRead[] = [];
   const unexpectedRequests: string[] = [];
 
@@ -180,6 +199,13 @@ async function mockClubApi(page: Page) {
       const playerId = url.searchParams.get('player_id');
       transactionReads.push({ type, playerId });
 
+      if (
+        transactionRouteHandler &&
+        (await transactionRouteHandler(route, transactionReads.length))
+      ) {
+        return;
+      }
+
       if (playerId === '4') {
         await route.fulfill({
           status: 404,
@@ -212,6 +238,12 @@ async function mockClubApi(page: Page) {
   });
 
   return { transactionReads, unexpectedRequests };
+}
+
+async function openHistoryTab(page: Page) {
+  await page.goto('/clubes/' + club.id);
+  await expect(page.getByRole('heading', { name: club.name })).toBeVisible();
+  await page.getByRole('tab').filter({ hasText: /Hist/ }).click();
 }
 
 async function openHistory(page: Page) {
@@ -256,6 +288,25 @@ async function expectHistoryTableScrollInside(page: Page) {
   });
   expect(
     await region.evaluate((element) => element.scrollLeft),
+  ).toBeGreaterThan(0);
+}
+
+async function expectHistoryLoadingScrollInside(page: Page) {
+  const loading = page.getByRole('status', { name: 'Carregando histórico' });
+  const dimensions = await loading.evaluate((element) => ({
+    width: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    overflowX: getComputedStyle(element).overflowX,
+  }));
+
+  expect(dimensions.width).toBeLessThanOrEqual(375);
+  expect(dimensions.scrollWidth).toBeGreaterThan(dimensions.width);
+  expect(dimensions.overflowX).toMatch(/auto|scroll/);
+  await loading.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+  });
+  expect(
+    await loading.evaluate((element) => element.scrollLeft),
   ).toBeGreaterThan(0);
 }
 
@@ -384,4 +435,169 @@ for (const viewport of viewports) {
     expect(documentNavigations).toBe(initialNavigationCount);
     await expectNoPageOverflow(page, viewport.width);
   });
+}
+
+for (const viewport of viewports) {
+  test(
+    'mantém o carregamento do histórico acessível em ' + viewport.label,
+    async ({ page }) => {
+      await page.setViewportSize({
+        width: viewport.width,
+        height: viewport.height,
+      });
+      let releaseTransactions!: () => void;
+      let notifyTransactionRequest!: () => void;
+      const pendingResponse = new Promise<void>((resolve) => {
+        releaseTransactions = resolve;
+      });
+      const transactionRequestStarted = new Promise<void>((resolve) => {
+        notifyTransactionRequest = resolve;
+      });
+      const api = await mockClubApi(page, async (route, requestNumber) => {
+        if (requestNumber !== 1) {
+          return false;
+        }
+
+        notifyTransactionRequest();
+        await pendingResponse;
+        await route.fulfill({ json: allTransactions });
+        return true;
+      });
+
+      await openHistoryTab(page);
+      await transactionRequestStarted;
+
+      const loading = page.getByRole('status', {
+        name: 'Carregando histórico',
+      });
+      try {
+        await expect(loading).toBeVisible();
+        await expect(
+          page.getByRole('button', { name: 'Exportar CSV' }),
+        ).toBeDisabled();
+        await expect(
+          page.getByRole('table', { name: /Hist/ }),
+        ).not.toBeVisible();
+        expect(api.transactionReads).toHaveLength(1);
+
+        if (viewport.width === 375) {
+          await expectHistoryLoadingScrollInside(page);
+        }
+        await expectNoPageOverflow(page, viewport.width);
+      } finally {
+        releaseTransactions();
+      }
+
+      const table = page.getByRole('table', { name: /Hist/ });
+      await expect(table).toBeVisible();
+      await expect(table.getByRole('row')).toHaveCount(5);
+      expect(api.unexpectedRequests).toEqual([]);
+      if (viewport.width === 375) {
+        await expectHistoryTableScrollInside(page);
+      }
+      await expectNoPageOverflow(page, viewport.width);
+    },
+  );
+}
+
+for (const viewport of viewports) {
+  test(
+    'exibe o estado vazio do histórico em ' + viewport.label,
+    async ({ page }) => {
+      await page.setViewportSize({
+        width: viewport.width,
+        height: viewport.height,
+      });
+      const api = await mockClubApi(page, async (route) => {
+        await route.fulfill({ json: emptyTransactions });
+        return true;
+      });
+
+      await openHistoryTab(page);
+      await expect(
+        page.getByText('Nenhuma transação ainda', { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText(
+          'As compras e vendas do clube aparecem aqui, com os totais logo abaixo.',
+          { exact: true },
+        ),
+      ).toBeVisible();
+      await expect(page.getByRole('table', { name: /Hist/ })).not.toBeVisible();
+      const historyRegion = page.getByRole('region', {
+        name: 'Tabela e resumo do histórico de transações',
+      });
+      await expect(historyRegion).toBeVisible();
+      expect(api.transactionReads.length).toBeGreaterThan(0);
+      expect(api.unexpectedRequests).toEqual([]);
+
+      if (viewport.width === 375) {
+        await expectHistoryTableScrollInside(page);
+      }
+      await expectNoPageOverflow(page, viewport.width);
+    },
+  );
+}
+
+for (const viewport of viewports) {
+  test(
+    'permite recuperar o histórico após falha de rede em ' + viewport.label,
+    async ({ page }) => {
+      await page.setViewportSize({
+        width: viewport.width,
+        height: viewport.height,
+      });
+      let retryAvailable = false;
+      const api = await mockClubApi(page, async (route) => {
+        if (!retryAvailable) {
+          await route.abort('failed');
+          return true;
+        }
+
+        await route.fulfill({ json: allTransactions });
+        return true;
+      });
+      let documentNavigations = 0;
+      page.on('request', (request) => {
+        if (
+          request.isNavigationRequest() &&
+          request.frame() === page.mainFrame()
+        ) {
+          documentNavigations += 1;
+        }
+      });
+
+      await openHistoryTab(page);
+      const initialNavigationCount = documentNavigations;
+      await expect(
+        page.getByText('Não foi possível carregar o histórico', {
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        page.getByText('Verifique a conexão e tente novamente.', {
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Tentar novamente' }),
+      ).toBeEnabled();
+      expect(api.transactionReads.length).toBeGreaterThan(0);
+      await expectNoPageOverflow(page, viewport.width);
+
+      const failedRequestCount = api.transactionReads.length;
+      retryAvailable = true;
+      await page.getByRole('button', { name: 'Tentar novamente' }).click();
+      const table = page.getByRole('table', { name: /Hist/ });
+      await expect(table).toBeVisible();
+      await expect(table.getByRole('row')).toHaveCount(5);
+      expect(api.transactionReads).toHaveLength(failedRequestCount + 1);
+      expect(api.unexpectedRequests).toEqual([]);
+      expect(documentNavigations).toBe(initialNavigationCount);
+      if (viewport.width === 375) {
+        await expectHistoryTableScrollInside(page);
+      }
+      await expectNoPageOverflow(page, viewport.width);
+    },
+  );
 }
