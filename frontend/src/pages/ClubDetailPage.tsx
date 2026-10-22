@@ -14,7 +14,7 @@ import {
   WalletCards,
   type LucideIcon,
 } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '@/components/layout/app-shell';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -370,6 +370,8 @@ function ClubRoster({
 
 export function ClubDetailPage() {
   const { clubId: clubIdParam } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const clubId = Number(clubIdParam);
   const isValidClubId = Number.isSafeInteger(clubId) && clubId > 0;
   const queryClient = useQueryClient();
@@ -389,11 +391,15 @@ export function ClubDetailPage() {
   const notFound = !isValidClubId || (club.isError && isNotFound(club.error));
   const breadcrumbPage =
     club.data?.name ?? (clubIdParam ? `Clube ${clubIdParam}` : 'Clube');
+  const requestedTab =
+    (location.state as { openTab?: string } | null)?.openTab === 'historico'
+      ? 'historico'
+      : 'elenco';
 
   useEffect(() => {
-    setActiveTab('elenco');
+    setActiveTab(requestedTab);
     setSellingPlayer(null);
-  }, [clubId]);
+  }, [clubId, requestedTab]);
 
   return (
     <AppShell
@@ -598,6 +604,7 @@ export function ClubDetailPage() {
               <ClubSellDialog
                 clubId={club.data.id}
                 clubName={club.data.name}
+                clubs={sidebarClubs.data ?? []}
                 player={sellingPlayer}
                 isStarter={Boolean(
                   lineup.data?.players.some(
@@ -607,9 +614,16 @@ export function ClubDetailPage() {
                 isLineupLoading={lineup.isFetching}
                 isLineupUnavailable={lineup.isError && !lineup.data}
                 onClose={() => setSellingPlayer(null)}
-                onViewHistory={() => {
+                onViewHistory={(sellerClubId) => {
                   setSellingPlayer(null);
-                  setActiveTab('historico');
+                  if (sellerClubId === club.data.id) {
+                    setActiveTab('historico');
+                    return;
+                  }
+
+                  navigate(`/clubes/${sellerClubId}`, {
+                    state: { openTab: 'historico' },
+                  });
                 }}
               />
             )}

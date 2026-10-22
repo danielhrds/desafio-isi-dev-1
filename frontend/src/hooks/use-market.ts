@@ -31,13 +31,19 @@ export function useSellPlayer() {
   return useMutation({
     mutationFn: ({ playerId }: { playerId: number; clubId: number }) =>
       sellPlayer(playerId),
-    onSuccess: async (_, { clubId }) => {
+    onSuccess: async (sale, { clubId }) => {
+      const affectedClubIds = new Set([clubId, sale.club_id]);
+
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['players'] }),
         queryClient.invalidateQueries({ queryKey: ['player'] }),
         queryClient.invalidateQueries({ queryKey: ['player-count'] }),
         queryClient.invalidateQueries({ queryKey: ['clubs'] }),
-        queryClient.invalidateQueries({ queryKey: ['club', clubId] }),
+        ...Array.from(affectedClubIds, (affectedClubId) =>
+          queryClient.invalidateQueries({
+            queryKey: ['club', affectedClubId],
+          }),
+        ),
       ]);
     },
   });

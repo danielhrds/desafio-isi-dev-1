@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { useSellPlayer } from '@/hooks/use-market';
 import { cn } from '@/lib/utils';
-import type { ClubRosterPlayer } from '@/types/club';
+import type { ClubListItem, ClubRosterPlayer } from '@/types/club';
 import type { PlayerPosition } from '@/types/player';
 import type { SellPlayerResult } from '@/types/market';
 
@@ -278,6 +278,7 @@ function SaleResult({
 export function ClubSellDialog({
   clubId,
   clubName,
+  clubs,
   player,
   isStarter,
   isLineupLoading,
@@ -287,12 +288,13 @@ export function ClubSellDialog({
 }: {
   clubId: number;
   clubName: string;
+  clubs: ClubListItem[];
   player: ClubRosterPlayer;
   isStarter: boolean;
   isLineupLoading: boolean;
   isLineupUnavailable: boolean;
   onClose: () => void;
-  onViewHistory: () => void;
+  onViewHistory: (clubId: number) => void;
 }) {
   const sellMutation = useSellPlayer();
   const result = sellMutation.data;
@@ -325,11 +327,20 @@ export function ClubSellDialog({
           <>
             <SaleResult
               result={result}
-              clubName={clubName}
-              isStarter={wasStarter}
+              clubName={
+                result.club_id === clubId
+                  ? clubName
+                  : (clubs.find((clubItem) => clubItem.id === result.club_id)
+                      ?.name ?? `Clube #${result.club_id}`)
+              }
+              isStarter={result.club_id === clubId && wasStarter}
             />
             <DialogFooter className="border-t pt-4 sm:flex-row">
-              <Button type="button" variant="outline" onClick={onViewHistory}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onViewHistory(result.club_id)}
+              >
                 <History aria-hidden="true" />
                 Ver histórico
               </Button>
