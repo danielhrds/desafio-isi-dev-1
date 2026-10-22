@@ -172,7 +172,7 @@ export function PlayerDetailsDialog({
             <Button
               type="button"
               variant="outline"
-              className="mt-3"
+              className="col-start-2 mt-3 justify-self-start"
               onClick={() => void player.refetch()}
             >
               Tentar novamente
