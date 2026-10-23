@@ -201,6 +201,14 @@ As versões exatas das dependências estão nos arquivos `package-lock.json` de 
 - **eslint-plugin-react-hooks e eslint-plugin-react-refresh:** regras de hooks e Fast Refresh.
 - **Prettier:** formatação.
 
+## Decisões e premissas
+
+- **Concorrência no cadastro de clubes:** um advisory lock transacional protege a contagem e a criação de clubes. Assim, dois cadastros simultâneos não conseguem ultrapassar o limite de 20 clubes.
+- **Leitura consistente para jogar uma partida:** os clubes são bloqueados em ordem de ID e as escalações e os atributos dos titulares são lidos em uma única consulta. Os seis duelos usam esses mesmos dados, o que evita misturar informações de momentos diferentes.
+- **Filtragem e paginação pelo valor de mercado:** o valor é calculado na consulta SQL, isso permite filtrar e ordenar por ele antes da paginação. A mesma consulta retorna os jogadores da página e o total de resultados.
+- **Nomes normalizados:** o nome original é preservado. Campos auxiliares em minúsculas permitem buscar e ordenar sem acentos, enquanto a unicidade dos nomes de clubes preserva os acentos.
+- **`club_id` no erro de partida:** a recusa por escalação incompleta inclui `club_id`, além de `message`. Isso permite destacar o clube correto no formulário sem depender do texto da mensagem.
+
 ## Funcionalidades não implementadas
 
 Nenhuma.
