@@ -1,3 +1,4 @@
+import { ErrorAlert } from '@/components/error-alert';
 import { Link, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
@@ -9,7 +10,6 @@ import {
   InvalidMatchId,
   MatchHistoryError,
 } from '@/components/matches/match-list-states';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -129,30 +129,37 @@ export function MatchDetailPage() {
             <MatchDuelsTable match={match.data} clubs={clubs.data ?? []} />
           </div>
         ) : (
-          <Alert variant="destructive">
-            <AlertTitle>Partida não encontrada</AlertTitle>
-            <AlertDescription>
-              <Link to="/partidas" className="font-medium underline">
-                Voltar para partidas
-              </Link>
-            </AlertDescription>
-          </Alert>
+          <ErrorAlert
+            title="Partida não encontrada"
+            message={
+              <>
+                <Link to="/partidas" className="font-medium underline">
+                  Voltar para partidas
+                </Link>
+              </>
+            }
+            icon={null}
+          />
         )}
         {match.data && clubs.isError && (
-          <Alert variant="destructive">
-            <AlertTitle>Não foi possível carregar os clubes</AlertTitle>
-            <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
-              {errorMessage(clubs.error)}
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => void clubs.refetch()}
-              >
-                Tentar novamente
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <ErrorAlert
+            title="Não foi possível carregar os clubes"
+            message={
+              <>
+                {errorMessage(clubs.error)}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void clubs.refetch()}
+                >
+                  Tentar novamente
+                </Button>
+              </>
+            }
+            icon={null}
+            descriptionClassName="flex flex-wrap items-center justify-between gap-3"
+          />
         )}
       </main>
     </AppShell>

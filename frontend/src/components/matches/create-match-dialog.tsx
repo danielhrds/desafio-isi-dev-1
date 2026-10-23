@@ -1,3 +1,4 @@
+import { ErrorAlert } from '@/components/error-alert';
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
@@ -120,29 +121,33 @@ export function CreateMatchDialog({
           className="space-y-4"
         >
           {requestError && (
-            <Alert id="create-match-request-error" variant="destructive">
-              <CircleAlert aria-hidden="true" />
-              <AlertTitle>Não foi possível jogar a partida</AlertTitle>
-              <AlertDescription>{requestError.message}</AlertDescription>
-            </Alert>
+            <ErrorAlert
+              id="create-match-request-error"
+              title="Não foi possível jogar a partida"
+              message={requestError.message}
+              icon={CircleAlert}
+            />
           )}
 
           {clubsError && (
-            <Alert variant="destructive">
-              <CircleAlert aria-hidden="true" />
-              <AlertTitle>Não foi possível carregar os clubes</AlertTitle>
-              <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
-                {errorMessage(clubsError)}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={onRetryClubs}
-                >
-                  Tentar novamente
-                </Button>
-              </AlertDescription>
-            </Alert>
+            <ErrorAlert
+              title="Não foi possível carregar os clubes"
+              message={
+                <>
+                  {errorMessage(clubsError)}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={onRetryClubs}
+                  >
+                    Tentar novamente
+                  </Button>
+                </>
+              }
+              icon={CircleAlert}
+              descriptionClassName="flex flex-wrap items-center justify-between gap-3"
+            />
           )}
 
           {!clubsLoading && !clubsError && clubs.length < 2 && (

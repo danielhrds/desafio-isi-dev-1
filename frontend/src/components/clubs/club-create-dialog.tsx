@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import axios from 'axios';
-import { CircleAlert, LoaderCircle, Shield, WalletCards } from 'lucide-react';
+import { LoaderCircle, Shield, WalletCards } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { FieldError } from '@/components/form-field-error';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ErrorAlert } from '@/components/error-alert';
+import { FormInput } from '@/components/form-input';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,9 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useCreateClub } from '@/hooks/use-clubs';
+import { apiErrorMessage } from '@/lib/api-error';
 import type { ClubSummary } from '@/types/club';
 import {
   clubCreateSchema,
@@ -28,16 +26,6 @@ const moneyFormatter = new Intl.NumberFormat('pt-BR', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
-
-function getErrorMessage(error: unknown): string {
-  if (axios.isAxiosError<{ message?: string }>(error)) {
-    return (
-      error.response?.data?.message ?? 'Verifique a conexão e tente novamente.'
-    );
-  }
-
-  return 'Verifique a conexão e tente novamente.';
-}
 
 export function ClubCreateDialog({
   open,
@@ -65,7 +53,7 @@ export function ClubCreateDialog({
       const club = await createClub.mutateAsync(payload);
       onCreated(club);
     } catch (error) {
-      setServerError(getErrorMessage(error));
+      setServerError(apiErrorMessage(error));
     }
   }
 
@@ -88,79 +76,32 @@ export function ClubCreateDialog({
 
         <form onSubmit={handleSubmit(submit)} noValidate className="space-y-4">
           {serverError && (
-            <Alert variant="destructive">
-              <CircleAlert aria-hidden="true" />
-              <AlertTitle>Não foi possível criar o clube</AlertTitle>
-              <AlertDescription>{serverError}</AlertDescription>
-            </Alert>
+            <ErrorAlert
+              title="Não foi possível criar o clube"
+              message={serverError}
+            />
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="create-club-name">Nome</Label>
-            <div className="relative">
-              <Shield
-                aria-hidden="true"
-                className="absolute top-2.5 left-3 size-4 text-muted-foreground"
-              />
-              <Input
-                id="create-club-name"
-                autoComplete="organization"
-                maxLength={60}
-                aria-invalid={!!errors.name}
-                aria-describedby={
-                  errors.name
-                    ? 'create-club-name-error'
-                    : 'create-club-name-help'
-                }
-                className="pl-9"
-                {...register('name')}
-              />
-            </div>
-            {errors.name ? (
-              <FieldError
-                id="create-club-name-error"
-                message={errors.name.message}
-              />
-            ) : (
-              <p
-                id="create-club-name-help"
-                className="text-xs text-muted-foreground"
-              >
-                De 3 a 60 caracteres e de 2 a 5 palavras; só letras, espaços,
-                hífen e ponto. Não pode repetir outro clube.
-              </p>
-            )}
-          </div>
+          <FormInput
+            id="create-club-name"
+            label="Nome"
+            icon={Shield}
+            autoComplete="organization"
+            maxLength={60}
+            error={errors.name?.message}
+            help="De 3 a 60 caracteres e de 2 a 5 palavras; só letras, espaços, hífen e ponto. Não pode repetir outro clube."
+            {...register('name')}
+          />
 
-          <div className="space-y-2">
-            <Label htmlFor="create-club-acronym">Sigla</Label>
-            <Input
-              id="create-club-acronym"
-              autoCapitalize="characters"
-              maxLength={3}
-              aria-invalid={!!errors.acronym}
-              aria-describedby={
-                errors.acronym
-                  ? 'create-club-acronym-error'
-                  : 'create-club-acronym-help'
-              }
-              {...register('acronym')}
-            />
-            {errors.acronym ? (
-              <FieldError
-                id="create-club-acronym-error"
-                message={errors.acronym.message}
-              />
-            ) : (
-              <p
-                id="create-club-acronym-help"
-                className="text-xs text-muted-foreground"
-              >
-                3 letras de A a Z, maiúsculas, que aparecem no nome nessa ordem;
-                a primeira é a primeira letra do nome.
-              </p>
-            )}
-          </div>
+          <FormInput
+            id="create-club-acronym"
+            label="Sigla"
+            autoCapitalize="characters"
+            maxLength={3}
+            error={errors.acronym?.message}
+            help="3 letras de A a Z, maiúsculas, que aparecem no nome nessa ordem; a primeira é a primeira letra do nome."
+            {...register('acronym')}
+          />
 
           <div className="flex items-center gap-2 rounded-lg border bg-muted-subtle px-3 py-2.5 text-sm text-muted-foreground">
             <WalletCards aria-hidden="true" className="size-4 shrink-0" />

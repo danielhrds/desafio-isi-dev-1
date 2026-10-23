@@ -1,6 +1,6 @@
+import { ErrorAlert } from '@/components/error-alert';
 import { Link } from 'react-router-dom';
 import { LoaderCircle, SearchX, ServerOff } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -43,24 +43,15 @@ export function MatchHistoryError({
   title?: string;
 }) {
   return (
-    <Alert
-      variant="destructive"
+    <ErrorAlert
       className="flex min-h-64 flex-col items-center justify-center gap-2 text-center"
-    >
-      <ServerOff aria-hidden="true" />
-      <AlertTitle className="text-base">{title}</AlertTitle>
-      <AlertDescription className="block max-w-sm">
-        {errorMessage(error)}
-      </AlertDescription>
-      <Button
-        type="button"
-        variant="outline"
-        className="mt-2"
-        onClick={onRetry}
-      >
-        Tentar novamente
-      </Button>
-    </Alert>
+      title={title}
+      message={errorMessage(error)}
+      icon={ServerOff}
+      titleClassName="text-base"
+      descriptionClassName="block max-w-sm"
+      onRetry={onRetry}
+    />
   );
 }
 

@@ -1,3 +1,4 @@
+import { ErrorAlert } from '@/components/error-alert';
 import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
 import {
@@ -349,13 +350,12 @@ export function PlayerBuyDialog({
           )}
 
           {purchaseError && (
-            <Alert variant="destructive">
-              <CircleAlert aria-hidden="true" />
-              <div>
-                <AlertTitle>{purchaseError.title}</AlertTitle>
-                <AlertDescription>{purchaseError.description}</AlertDescription>
-              </div>
-            </Alert>
+            <ErrorAlert
+              title={purchaseError.title}
+              message={purchaseError.description}
+              icon={CircleAlert}
+              groupContent
+            />
           )}
 
           <div className="flex items-center gap-3 rounded-lg border bg-muted-subtle p-3">

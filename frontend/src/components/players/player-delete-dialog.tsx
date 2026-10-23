@@ -1,8 +1,8 @@
+import { ErrorAlert } from '@/components/error-alert';
 import { useRef, useState } from 'react';
 import axios from 'axios';
 import { LoaderCircle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -72,10 +72,11 @@ export function PlayerDeleteDialog({
         </DialogHeader>
 
         {errorMessage && (
-          <Alert variant="destructive">
-            <AlertTitle>Não foi possível excluir o jogador</AlertTitle>
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
+          <ErrorAlert
+            title="Não foi possível excluir o jogador"
+            message={errorMessage}
+            icon={null}
+          />
         )}
 
         <DialogFooter className="border-t pt-4">

@@ -1,3 +1,4 @@
+import { ErrorAlert } from '@/components/error-alert';
 import axios from 'axios';
 import { useMemo, useRef, useState } from 'react';
 import {
@@ -16,7 +17,6 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -629,13 +629,12 @@ export function ClubTransactionHistory({ clubId }: { clubId: number }) {
         {transactions.isPending ? (
           <HistoryLoading />
         ) : filterRejected ? (
-          <Alert variant="destructive" className="m-4">
-            <AlertCircle aria-hidden="true" />
-            <AlertTitle>O filtro foi recusado.</AlertTitle>
-            <AlertDescription>
-              {getApiMessage(transactions.error)}
-            </AlertDescription>
-          </Alert>
+          <ErrorAlert
+            className="m-4"
+            title="O filtro foi recusado."
+            message={getApiMessage(transactions.error)}
+            icon={AlertCircle}
+          />
         ) : transactions.data ? (
           <div
             role="region"

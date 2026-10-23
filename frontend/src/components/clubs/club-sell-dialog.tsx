@@ -1,3 +1,4 @@
+import { ErrorAlert } from '@/components/error-alert';
 import axios from 'axios';
 import {
   CircleAlert,
@@ -394,11 +395,11 @@ export function ClubSellDialog({
             )}
 
             {error && (
-              <Alert variant="destructive">
-                <CircleAlert aria-hidden="true" />
-                <AlertTitle>{error.title}</AlertTitle>
-                <AlertDescription>{error.message}</AlertDescription>
-              </Alert>
+              <ErrorAlert
+                title={error.title}
+                message={error.message}
+                icon={CircleAlert}
+              />
             )}
 
             <PlayerSummary player={player} />

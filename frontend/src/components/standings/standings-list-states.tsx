@@ -1,7 +1,6 @@
+import { ErrorAlert } from '@/components/error-alert';
 import { CircleAlert, ListOrdered } from 'lucide-react';
 import { apiErrorMessage } from '@/lib/api-error';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -62,25 +61,14 @@ export function StandingsError({
   onRetry: () => void;
 }) {
   return (
-    <Alert
-      variant="destructive"
+    <ErrorAlert
       className="flex min-h-64 flex-col items-center justify-center gap-2 text-center"
-    >
-      <CircleAlert aria-hidden="true" />
-      <AlertTitle className="text-base">
-        Não foi possível carregar a classificação
-      </AlertTitle>
-      <AlertDescription className="block max-w-sm">
-        {apiErrorMessage(error)}
-      </AlertDescription>
-      <Button
-        type="button"
-        variant="outline"
-        className="mt-2"
-        onClick={onRetry}
-      >
-        Tentar novamente
-      </Button>
-    </Alert>
+      title="Não foi possível carregar a classificação"
+      message={apiErrorMessage(error)}
+      icon={CircleAlert}
+      titleClassName="text-base"
+      descriptionClassName="block max-w-sm"
+      onRetry={onRetry}
+    />
   );
 }

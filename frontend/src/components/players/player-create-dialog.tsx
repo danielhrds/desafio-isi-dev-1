@@ -1,17 +1,15 @@
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import axios from 'axios';
 import {
   BarChart3,
-  CircleAlert,
   Info,
   LoaderCircle,
   LockKeyhole,
   UserRound,
 } from 'lucide-react';
 import { useForm, useWatch } from 'react-hook-form';
-import { FieldError } from '@/components/form-field-error';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ErrorAlert } from '@/components/error-alert';
+import { FormInput } from '@/components/form-input';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -21,27 +19,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { useCreatePlayer } from '@/hooks/use-players';
-import type { PlayerDetail, PlayerPosition } from '@/types/player';
+import { apiErrorMessage } from '@/lib/api-error';
+import type { PlayerDetail } from '@/types/player';
+import { PlayerPositionField } from './player-position-field';
 import {
   playerCreateSchema,
   type PlayerCreateFormValues,
   type PlayerCreatePayload,
 } from './player-create-schema';
-
-const positions: Array<{
-  value: PlayerPosition;
-  label: string;
-}> = [
-  { value: 'GOL', label: 'Goleiro' },
-  { value: 'ZAG', label: 'Zagueiro' },
-  { value: 'LAT', label: 'Lateral' },
-  { value: 'MEI', label: 'Meio-campo' },
-  { value: 'ATA', label: 'Atacante' },
-];
 
 const attributes = [
   { key: 'pace', label: 'Velocidade' },
@@ -133,12 +120,7 @@ export function PlayerCreateDialog({
       const player = await createPlayer.mutateAsync(payload);
       onCreated(player);
     } catch (error) {
-      setServerError(
-        axios.isAxiosError<{ message?: string }>(error)
-          ? (error.response?.data?.message ??
-              'Verifique a conexão e tente novamente.')
-          : 'Verifique a conexão e tente novamente.',
-      );
+      setServerError(apiErrorMessage(error));
     }
   }
 
@@ -153,39 +135,22 @@ export function PlayerCreateDialog({
     max: number,
     help?: string,
   ) {
-    const error = errors[name]?.message;
     return (
-      <div className="min-w-0 space-y-2" key={name}>
-        <Label htmlFor={`create-${name}`}>{label}</Label>
-        <Input
-          id={`create-${name}`}
-          type="number"
-          inputMode="numeric"
-          step="1"
-          min={min}
-          max={max}
-          className="appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-          aria-invalid={!!error}
-          aria-describedby={
-            error
-              ? `create-${name}-error`
-              : help
-                ? `create-${name}-help`
-                : undefined
-          }
-          {...register(name, { valueAsNumber: true })}
-        />
-        {error ? (
-          <FieldError id={`create-${name}-error`} message={error} />
-        ) : help ? (
-          <p
-            id={`create-${name}-help`}
-            className="text-xs text-muted-foreground"
-          >
-            {help}
-          </p>
-        ) : null}
-      </div>
+      <FormInput
+        key={name}
+        id={`create-${name}`}
+        label={label}
+        type="number"
+        inputMode="numeric"
+        step="1"
+        min={min}
+        max={max}
+        fieldClassName="min-w-0"
+        className="appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        error={errors[name]?.message}
+        help={help}
+        {...register(name, { valueAsNumber: true })}
+      />
     );
   }
 
@@ -211,88 +176,31 @@ export function PlayerCreateDialog({
         >
           <div className="min-h-0 space-y-5 overflow-y-auto px-6 pb-5">
             {serverError && (
-              <Alert variant="destructive">
-                <CircleAlert aria-hidden="true" />
-                <AlertTitle>Não foi possível cadastrar</AlertTitle>
-                <AlertDescription>{serverError}</AlertDescription>
-              </Alert>
+              <ErrorAlert
+                title="Não foi possível cadastrar"
+                message={serverError}
+              />
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="create-name">Nome</Label>
-              <div className="relative">
-                <UserRound
-                  aria-hidden="true"
-                  className="absolute top-2.5 left-3 size-4 text-muted-foreground"
-                />
-                <Input
-                  id="create-name"
-                  autoComplete="name"
-                  maxLength={110}
-                  className="pl-9"
-                  aria-invalid={!!errors.name}
-                  aria-describedby={
-                    errors.name ? 'create-name-error' : 'create-name-help'
-                  }
-                  {...register('name')}
-                />
-              </div>
-              {errors.name ? (
-                <FieldError
-                  id="create-name-error"
-                  message={errors.name.message}
-                />
-              ) : (
-                <p
-                  id="create-name-help"
-                  className="text-xs text-muted-foreground"
-                >
-                  De 3 a 100 caracteres, com pelo menos duas palavras e sem
-                  números.
-                </p>
-              )}
-            </div>
+            <FormInput
+              id="create-name"
+              label="Nome"
+              icon={UserRound}
+              autoComplete="name"
+              maxLength={110}
+              error={errors.name?.message}
+              help="De 3 a 100 caracteres, com pelo menos duas palavras e sem números."
+              {...register('name')}
+            />
 
-            <div className="space-y-2">
-              <p id="create-position-label" className="text-sm font-medium">
-                Posição
-              </p>
-              <div
-                className="grid grid-cols-2 gap-2 sm:grid-cols-5"
-                role="group"
-                aria-labelledby="create-position-label"
-                aria-invalid={!!errors.position}
-                aria-describedby={
-                  errors.position ? 'create-position-error' : undefined
-                }
-              >
-                {positions.map((position) => (
-                  <Button
-                    key={position.value}
-                    type="button"
-                    variant="outline"
-                    aria-pressed={values.position === position.value}
-                    onClick={() =>
-                      setValue('position', position.value, {
-                        shouldValidate: true,
-                      })
-                    }
-                    className="group h-14 min-w-0 flex-col gap-0.5 border-border font-semibold aria-pressed:border-primary aria-pressed:bg-primary-soft aria-pressed:text-primary"
-                  >
-                    {position.value}
-                    <span className="text-xs font-normal text-muted-foreground group-aria-pressed:text-primary">
-                      {position.label}
-                    </span>
-                  </Button>
-                ))}
-              </div>
-              {errors.position?.message && (
-                <FieldError
-                  id="create-position-error"
-                  message={errors.position.message}
-                />
-              )}
-            </div>
+            <PlayerPositionField
+              idPrefix="create"
+              value={values.position}
+              error={errors.position?.message}
+              onChange={(position) =>
+                setValue('position', position, { shouldValidate: true })
+              }
+            />
 
             <div className="grid gap-4 sm:grid-cols-3">
               {numberInput('age', 'Idade', 16, 45, 'De 16 a 45 anos.')}

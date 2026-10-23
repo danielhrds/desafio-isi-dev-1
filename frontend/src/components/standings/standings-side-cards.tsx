@@ -1,6 +1,6 @@
+import { ErrorAlert } from '@/components/error-alert';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CircleAlert } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -79,21 +79,24 @@ export function RecentMatchesCard({
         </CardContent>
       ) : error ? (
         <CardContent className="px-4 py-4">
-          <Alert variant="destructive">
-            <CircleAlert aria-hidden="true" />
-            <AlertTitle>Não foi possível carregar as partidas</AlertTitle>
-            <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
-              {apiErrorMessage(error)}
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={onRetry}
-              >
-                Tentar novamente
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <ErrorAlert
+            title="Não foi possível carregar as partidas"
+            message={
+              <>
+                {apiErrorMessage(error)}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={onRetry}
+                >
+                  Tentar novamente
+                </Button>
+              </>
+            }
+            icon={CircleAlert}
+            descriptionClassName="flex flex-wrap items-center justify-between gap-3"
+          />
         </CardContent>
       ) : (
         <CardContent className="space-y-4 px-5 py-4">

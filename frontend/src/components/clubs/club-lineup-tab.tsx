@@ -1,3 +1,4 @@
+import { ErrorAlert } from '@/components/error-alert';
 import { useEffect, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
@@ -416,15 +417,15 @@ export function ClubLineupTab({
           <form onSubmit={handleSubmit(submit)} noValidate>
             <CardContent className="space-y-5 p-4 sm:p-5">
               {serverError && (
-                <Alert variant="destructive">
-                  <CircleAlert aria-hidden="true" />
-                  <AlertTitle>
-                    {isConflictResponse(saveLineup.error)
+                <ErrorAlert
+                  title={
+                    isConflictResponse(saveLineup.error)
                       ? 'A escalação foi recusada'
-                      : 'Não foi possível salvar a escalação'}
-                  </AlertTitle>
-                  <AlertDescription>{serverError}</AlertDescription>
-                </Alert>
+                      : 'Não foi possível salvar a escalação'
+                  }
+                  message={serverError}
+                  icon={CircleAlert}
+                />
               )}
 
               <fieldset disabled={saving} className="space-y-3">

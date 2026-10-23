@@ -1,3 +1,4 @@
+import { ErrorAlert } from '@/components/error-alert';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -13,7 +14,6 @@ import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { AppShell } from '@/components/layout/app-shell';
 import { ClubCreateDialog } from '@/components/clubs/club-create-dialog';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -115,26 +115,15 @@ export function ClubsPage() {
         </div>
 
         {clubs.isError ? (
-          <Alert
-            variant="destructive"
+          <ErrorAlert
             className="flex min-h-72 flex-col items-center justify-center gap-2 text-center"
-          >
-            <ServerOff aria-hidden="true" />
-            <AlertTitle className="text-base">
-              Não foi possível carregar os clubes
-            </AlertTitle>
-            <AlertDescription className="block max-w-sm">
-              {apiErrorMessage(clubs.error)}
-            </AlertDescription>
-            <Button
-              type="button"
-              variant="outline"
-              className="mt-2"
-              onClick={() => void clubs.refetch()}
-            >
-              Tentar novamente
-            </Button>
-          </Alert>
+            title="Não foi possível carregar os clubes"
+            message={apiErrorMessage(clubs.error)}
+            icon={ServerOff}
+            titleClassName="text-base"
+            descriptionClassName="block max-w-sm"
+            onRetry={() => void clubs.refetch()}
+          />
         ) : clubs.isPending ? (
           <>
             <div

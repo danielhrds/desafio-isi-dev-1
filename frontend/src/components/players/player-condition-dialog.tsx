@@ -1,3 +1,4 @@
+import { ErrorAlert } from '@/components/error-alert';
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
@@ -5,7 +6,6 @@ import { HeartPulse, LoaderCircle, LockKeyhole } from 'lucide-react';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -252,11 +252,11 @@ export function PlayerConditionDialog({
           />
 
           {requestError && (
-            <Alert variant="destructive">
-              <HeartPulse aria-hidden="true" />
-              <AlertTitle>Não foi possível alterar a condição</AlertTitle>
-              <AlertDescription>{requestError}</AlertDescription>
-            </Alert>
+            <ErrorAlert
+              title="Não foi possível alterar a condição"
+              message={requestError}
+              icon={HeartPulse}
+            />
           )}
 
           <DialogFooter className="border-t pt-4">

@@ -1,3 +1,4 @@
+import { ErrorAlert } from '@/components/error-alert';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import {
@@ -446,26 +447,15 @@ export function ClubDetailPage() {
         ) : club.isPending ? (
           <ClubDetailSkeleton />
         ) : club.isError && !club.data ? (
-          <Alert
-            variant="destructive"
+          <ErrorAlert
             className="flex min-h-72 flex-col items-center justify-center gap-2 text-center"
-          >
-            <ServerOff aria-hidden="true" />
-            <AlertTitle className="text-base">
-              Não foi possível carregar o clube
-            </AlertTitle>
-            <AlertDescription className="block max-w-sm">
-              {apiErrorMessage(club.error)}
-            </AlertDescription>
-            <Button
-              type="button"
-              variant="outline"
-              className="mt-2"
-              onClick={() => void club.refetch()}
-            >
-              Tentar novamente
-            </Button>
-          </Alert>
+            title="Não foi possível carregar o clube"
+            message={apiErrorMessage(club.error)}
+            icon={ServerOff}
+            titleClassName="text-base"
+            descriptionClassName="block max-w-sm"
+            onRetry={() => void club.refetch()}
+          />
         ) : club.data ? (
           <div className="space-y-6">
             {club.isError && club.data && (

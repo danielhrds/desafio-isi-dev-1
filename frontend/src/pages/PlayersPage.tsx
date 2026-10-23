@@ -9,6 +9,7 @@ import {
   X,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
+import { ErrorAlert } from '@/components/error-alert';
 import { PlayerConditionDialog } from '@/components/players/player-condition-dialog';
 import { PlayerBuyDialog } from '@/components/players/player-buy-dialog';
 import { PlayerDeleteDialog } from '@/components/players/player-delete-dialog';
@@ -22,7 +23,6 @@ import {
   PlayerTable,
   PlayerTableSkeleton,
 } from '@/components/players/player-table';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { useClubs } from '@/hooks/use-clubs';
 import { usePlayerCounts, usePlayers } from '@/hooks/use-players';
@@ -165,34 +165,25 @@ export function PlayersPage() {
           }
         >
           {isError ? (
-            <Alert
-              variant="destructive"
+            <ErrorAlert
               className="flex min-h-72 flex-col items-center justify-center gap-2 border-0 text-center"
-            >
-              <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-muted">
-                <ServerOff
-                  aria-hidden="true"
-                  className="size-5 text-muted-foreground"
-                />
-              </div>
-              <AlertTitle className="text-base text-foreground">
-                Não foi possível carregar os jogadores
-              </AlertTitle>
-              <AlertDescription className="block max-w-sm text-muted-foreground">
-                {apiErrorMessage(players.error ?? clubs.error)}
-              </AlertDescription>
-              <Button
-                type="button"
-                variant="outline"
-                className="mt-2"
-                onClick={() => {
-                  if (players.isError) void players.refetch();
-                  if (clubs.isError) void clubs.refetch();
-                }}
-              >
-                Tentar novamente
-              </Button>
-            </Alert>
+              leading={
+                <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-muted">
+                  <ServerOff
+                    aria-hidden="true"
+                    className="size-5 text-muted-foreground"
+                  />
+                </div>
+              }
+              title="Não foi possível carregar os jogadores"
+              titleClassName="text-base text-foreground"
+              message={apiErrorMessage(players.error ?? clubs.error)}
+              descriptionClassName="block max-w-sm text-muted-foreground"
+              onRetry={() => {
+                if (players.isError) void players.refetch();
+                if (clubs.isError) void clubs.refetch();
+              }}
+            />
           ) : isLoading ? (
             <>
               <div
