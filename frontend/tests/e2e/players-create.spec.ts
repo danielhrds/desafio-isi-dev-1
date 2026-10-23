@@ -241,9 +241,10 @@ async function openCreate(page: Page, width: number) {
     exact: true,
   });
   await expect(dialog).toBeInViewport({ ratio: 1 });
-  await expect(
-    dialog.getByRole('button', { name: 'MEI Meio-campo', exact: true }),
-  ).toHaveAttribute('aria-pressed', 'true');
+  for (const [code, label] of Object.entries(positionLabels))
+    await expect(
+      dialog.getByRole('button', { name: `${code} ${label}`, exact: true }),
+    ).toHaveAttribute('aria-pressed', 'false');
   for (const name of ['Cancelar', 'Salvar jogador'])
     await expect(
       dialog.getByRole('button', { name, exact: true }),
@@ -458,6 +459,19 @@ for (const viewport of [
         dialog.getByRole('button', { name: 'Salvar jogador', exact: true });
       await save().click();
       await expectFieldError(dialog, 'name', 'Use de 3 a 100 caracteres.');
+      const positionGroup = dialog.getByRole('group', {
+        name: 'Posição',
+        exact: true,
+      });
+      const positionError = dialog.locator('#create-position-error');
+      await expect(positionGroup).toHaveAttribute('aria-invalid', 'true');
+      await expect(positionGroup).toHaveAttribute(
+        'aria-describedby',
+        'create-position-error',
+      );
+      await expect(positionError).toHaveText('Selecione uma posição.');
+      await positionError.scrollIntoViewIfNeeded();
+      await expect(positionError).toBeInViewport({ ratio: 1 });
       for (const [key] of numericFields) {
         await expectFieldError(
           dialog,
@@ -476,7 +490,15 @@ for (const viewport of [
         path: testInfo.outputPath('j06-required.png'),
         fullPage: true,
       });
+      await fill(dialog, { ...input, position: undefined });
+      await save().click();
+      await expect(dialog.locator('[aria-invalid="true"]')).toHaveCount(1);
+      await expect(positionGroup).toHaveAttribute('aria-invalid', 'true');
+      await expect(positionError).toHaveText('Selecione uma posição.');
+      expect(api.posts).toHaveLength(0);
       await fill(dialog, input);
+      await expect(positionGroup).toHaveAttribute('aria-invalid', 'false');
+      await expect(positionError).toHaveCount(0);
       const invalidNames = [
         ['', 'Use de 3 a 100 caracteres.'],
         ['   ', 'Use de 3 a 100 caracteres.'],

@@ -97,8 +97,9 @@ test('J01 desktop list renders API data and its first page', async ({
   await page.goto('/jogadores');
 
   await expect(page.getByRole('heading', { name: 'Jogadores' })).toBeVisible();
-  await expect(page.getByRole('table', { name: 'Jogadores' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: /André Lacerda/ })).toBeVisible();
+  const table = page.getByRole('table', { name: 'Jogadores', exact: true });
+  await expect(table).toBeVisible();
+  await expect(table.getByText('André Lacerda', { exact: true })).toBeVisible();
   await expect(page.getByText('Mostrando 1–10 de 23 jogadores')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Anterior' })).toBeDisabled();
 
