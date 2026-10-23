@@ -33,6 +33,8 @@ const davi = player(4, 'Davi Melo', 'MEI', 'APTO', null);
 const eduardo = player(5, 'Eduardo Paiva', 'ATA', 'MAL_CONDICIONADO', 1);
 const joao = player(6, 'João Silva', 'ATA', 'APTO', 1);
 const longSearch = 'a'.repeat(100);
+const unicodeSearch = '𐐀'.repeat(100);
+const nonBreakingSpaceSearch = '\u00a0jo\u00a0';
 
 interface Listing {
   data: PlayerListItem[];
@@ -107,6 +109,10 @@ async function mockListings(page: Page) {
       joao: 'joao',
       JOÃO: 'joao',
       [longSearch]: 'none',
+      [unicodeSearch]: 'none',
+      '𐐀𐐀': 'none',
+      'A B': 'none',
+      [nonBreakingSpaceSearch]: 'none',
     };
     const key =
       search !== undefined
@@ -338,8 +344,20 @@ for (const viewport of [
         }),
       ).toHaveCount(0);
 
-      await expect(search).toHaveAttribute('maxlength', '100');
+      await expect(search).not.toHaveAttribute('maxlength');
       await search.fill(`${longSearch}x`);
+      await expect(search).toHaveValue(`${longSearch}x`);
+      await page.clock.runFor(400);
+      await expect(
+        page.getByText('Use no máximo 100 caracteres para buscar.', {
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(search).toHaveAttribute('aria-invalid', 'true');
+      expect(
+        api.requests.some(({ search }) => search === `${longSearch}x`),
+      ).toBe(false);
+      await search.fill(longSearch);
       await expect(search).toHaveValue(longSearch);
       await page.clock.runFor(350);
       await expect(
@@ -352,12 +370,6 @@ for (const viewport of [
         limit: '10',
         search: longSearch,
       });
-      const requestsAtMaxLength = api.requests.length;
-      await search.press('End');
-      await search.press('x');
-      await page.clock.runFor(400);
-      await expect(search).toHaveValue(longSearch);
-      expect(api.requests).toHaveLength(requestsAtMaxLength);
       const removeLongSearch = page.getByRole('button', {
         name: `Remover filtro Busca: ${longSearch}`,
         exact: true,
@@ -374,6 +386,55 @@ for (const viewport of [
       await search.clear();
       await page.clock.runFor(350);
       await expectView(page, allNames, [6, 2, 4]);
+      const beforeSingleCodePoint = api.requests.length;
+      await search.fill('𐐀');
+      await page.clock.runFor(400);
+      await expect(
+        page.getByText('Digite pelo menos 2 caracteres para buscar.', {
+          exact: true,
+        }),
+      ).toBeVisible();
+      expect(api.requests).toHaveLength(beforeSingleCodePoint);
+
+      for (const [raw, normalized] of [
+        ['𐐀𐐀', '𐐀𐐀'],
+        [unicodeSearch, unicodeSearch],
+        ['  A   B  ', 'A B'],
+        [nonBreakingSpaceSearch, nonBreakingSpaceSearch],
+      ]) {
+        await search.fill(raw);
+        await expect(search).toHaveValue(raw);
+        await page.clock.runFor(350);
+        await expect(
+          page.getByText(`Nenhum jogador encontrado para “${normalized}”`, {
+            exact: true,
+          }),
+        ).toBeVisible();
+        expect(api.tableRequests()).toContainEqual({
+          page: '1',
+          limit: '10',
+          search: normalized,
+        });
+      }
+      await search.fill(`${unicodeSearch}𐐀`);
+      await page.clock.runFor(400);
+      await expect(
+        page.getByText('Use no máximo 100 caracteres para buscar.', {
+          exact: true,
+        }),
+      ).toBeVisible();
+      await search.fill('A\tB');
+      await page.clock.runFor(400);
+      await expect(
+        page.getByText('Não use caracteres de controle na busca.', {
+          exact: true,
+        }),
+      ).toBeVisible();
+      expect(
+        api.requests.some(
+          ({ search }) => search === `${unicodeSearch}𐐀` || search === 'A\tB',
+        ),
+      ).toBe(false);
       await api.expectFinished(viewport.width);
     });
 

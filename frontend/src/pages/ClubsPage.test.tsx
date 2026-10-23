@@ -11,6 +11,7 @@ import userEvent from '@testing-library/user-event';
 import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { toast } from 'sonner';
 import { Toaster } from '../components/ui/sonner.js';
 import { apiClient } from '../services/api-client.js';
 import type { ClubListItem, ClubSort, ClubSummary } from '../types/club.js';
@@ -188,6 +189,7 @@ const domMethodDescriptors = new Map(
 );
 
 afterEach(() => {
+  toast.dismiss();
   vi.restoreAllMocks();
   domMethods.forEach((method) => {
     const descriptor = domMethodDescriptors.get(method);
@@ -438,7 +440,7 @@ describe('F05 club creation', () => {
 
     const nameInput = screen.getByRole('textbox', { name: 'Nome' });
     const acronymInput = screen.getByRole('textbox', { name: 'Sigla' });
-    expect(nameInput).toHaveAttribute('maxLength', '60');
+    expect(nameInput).not.toHaveAttribute('maxLength');
     expect(acronymInput).toHaveAttribute('maxLength', '3');
 
     fireEvent.change(nameInput, { target: { value: 'AB' } });
@@ -475,6 +477,60 @@ describe('F05 club creation', () => {
     );
     expect(post).not.toHaveBeenCalled();
   });
+
+  it.each([
+    [
+      'Unicode code points',
+      `A${'𐐀'.repeat(56)} BC`,
+      `A${'𐐀'.repeat(56)} BC`,
+      'ABC',
+    ],
+    [
+      'spaces normalized before the limit',
+      `  A   ${'B'.repeat(58)}  `,
+      `A ${'B'.repeat(58)}`,
+      'ABB',
+    ],
+  ])(
+    'accepts a name at the limit with %s without truncating the input',
+    async (_label, rawName, name, acronym) => {
+      vi.spyOn(apiClient, 'get').mockImplementation(async (url) => {
+        if (url === '/players') return responseWith(playerPage);
+        if (url === '/clubs') return responseWith(clubs);
+        throw new Error(`Unexpected GET ${url}`);
+      });
+      const createdClub = {
+        id: 4,
+        name,
+        acronym,
+        cash: 300,
+        squad_value: 0,
+        net_worth: 300,
+      };
+      const post = vi
+        .spyOn(apiClient, 'post')
+        .mockResolvedValue(responseWith(createdClub));
+      const user = userEvent.setup();
+      renderPage();
+      await screen.findByRole('table', { name: 'Clubes' });
+      await user.click(screen.getByRole('button', { name: 'Novo clube' }));
+      const nameInput = screen.getByRole('textbox', { name: 'Nome' });
+      await user.click(nameInput);
+      await user.paste(rawName);
+      expect(nameInput).toHaveValue(rawName);
+      await user.type(screen.getByRole('textbox', { name: 'Sigla' }), acronym);
+      await user.click(screen.getByRole('button', { name: 'Criar clube' }));
+      await waitFor(() =>
+        expect(post).toHaveBeenCalledExactlyOnceWith('/clubs', {
+          name,
+          acronym,
+        }),
+      );
+      await waitFor(() =>
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+      );
+    },
+  );
 
   it('requires a three-letter uppercase acronym and associates its error with the input', async () => {
     vi.spyOn(apiClient, 'get').mockImplementation(async (url) => {

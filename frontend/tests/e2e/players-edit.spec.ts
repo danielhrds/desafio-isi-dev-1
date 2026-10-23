@@ -423,6 +423,12 @@ const boundaries: UpdatePlayerInput[] = [
   { name: 'Zelia Costa', position: 'LAT', age: 34, agility: 100 },
   { name: 'Zelia Melo', position: 'ATA', age: 35, agility: 85 },
   { name: 'Zelia Souza', position: 'MEI', age: 45, agility: 85 },
+  {
+    name: `${'𐐀'.repeat(49)} ${'𐐨'.repeat(50)}`,
+    position: 'MEI',
+    age: 45,
+    agility: 85,
+  },
 ];
 
 for (const viewport of [

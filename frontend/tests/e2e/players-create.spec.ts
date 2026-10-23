@@ -362,6 +362,8 @@ async function expectSavedList(page: Page, width: number) {
 }
 
 const boundaries: CreatePlayerInput[] = [
+  { ...input, name: `${'𐐀'.repeat(49)} ${'𐐨'.repeat(50)}` },
+  { ...input, name: `A ${'B'.repeat(98)}` },
   {
     name: 'A B',
     position: 'GOL',
