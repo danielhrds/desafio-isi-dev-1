@@ -1,8 +1,5 @@
 import { z } from 'zod';
-
-function normalizeName(value: string): string {
-  return value.replace(/^ +| +$/g, '').replace(/ {2,}/g, ' ');
-}
+import { normalizeSpaces } from '@/lib/text';
 
 function containsControl(value: string): boolean {
   return [...value].some((character) => {
@@ -13,7 +10,7 @@ function containsControl(value: string): boolean {
 
 export const playerNameSchema = z
   .string()
-  .transform(normalizeName)
+  .transform(normalizeSpaces)
   .superRefine((name, context) => {
     if ([...name].length < 3 || [...name].length > 100) {
       context.addIssue({
@@ -32,6 +29,30 @@ export const playerNameSchema = z
       });
     }
   });
+
+export const playerSearchSchema = z
+  .string()
+  .transform(normalizeSpaces)
+  .superRefine((search, context) => {
+    const length = [...search].length;
+    if (length === 0) return;
+
+    if (containsControl(search)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Não use caracteres de controle na busca.',
+      });
+    } else if (length < 2 || length > 100) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          length < 2
+            ? 'Digite pelo menos 2 caracteres para buscar.'
+            : 'Use no máximo 100 caracteres para buscar.',
+      });
+    }
+  })
+  .transform((search) => search || undefined);
 
 export const playerPositionSchema = z.enum(
   ['GOL', 'ZAG', 'LAT', 'MEI', 'ATA'],

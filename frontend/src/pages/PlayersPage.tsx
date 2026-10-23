@@ -18,6 +18,7 @@ import { PlayerEditDialog } from '@/components/players/player-edit-dialog';
 import { PlayerCreateDialog } from '@/components/players/player-create-dialog';
 import { PlayerCreatedDialog } from '@/components/players/player-created-dialog';
 import { PlayerFilters } from '@/components/players/player-filters';
+import { playerSearchSchema } from '@/components/players/player-validation';
 import { PlayerPagination } from '@/components/players/player-pagination';
 import {
   PlayerTable,
@@ -62,8 +63,8 @@ export function PlayersPage() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      const value = searchInput.trim();
-      const search = value.length >= 2 ? value : undefined;
+      const result = playerSearchSchema.safeParse(searchInput);
+      const search = result.success ? result.data : undefined;
       setFilters((current) => {
         if (current.search === search) return current;
         const next = { ...current, search };

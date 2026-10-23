@@ -41,6 +41,7 @@ import type {
   PlayerPosition,
   PlayerSort,
 } from '@/types/player';
+import { playerSearchSchema } from './player-validation';
 
 const positionLabels: Record<PlayerPosition, string> = {
   GOL: 'Goleiro',
@@ -274,6 +275,10 @@ export function PlayerFilters({
   counts: { all?: number; free?: number; assigned?: number };
 }) {
   const searchId = useId();
+  const searchResult = playerSearchSchema.safeParse(searchInput);
+  const searchError = searchResult.success
+    ? undefined
+    : searchResult.error.issues[0]?.message;
   const club = clubs.find((item) => item.id === filters.club_id);
   const activeChips: Array<{
     label: string;
@@ -335,7 +340,8 @@ export function PlayerFilters({
             value={searchInput}
             onChange={(event) => onSearchInput(event.target.value)}
             placeholder="Buscar por nome"
-            maxLength={100}
+            aria-invalid={!!searchError}
+            aria-describedby={searchError ? `${searchId}-error` : undefined}
             className="pl-9"
           />
         </div>
@@ -439,9 +445,13 @@ export function PlayerFilters({
         />
       </div>
 
-      {searchInput.trim().length === 1 && (
-        <p role="status" className="-mt-3 mb-4 text-xs text-muted-foreground">
-          Digite pelo menos 2 caracteres para buscar.
+      {searchError && (
+        <p
+          id={`${searchId}-error`}
+          role="status"
+          className="-mt-3 mb-4 text-xs text-destructive"
+        >
+          {searchError}
         </p>
       )}
       {activeChips.length > 0 && (

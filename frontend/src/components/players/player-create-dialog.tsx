@@ -187,7 +187,6 @@ export function PlayerCreateDialog({
               label="Nome"
               icon={UserRound}
               autoComplete="name"
-              maxLength={110}
               error={errors.name?.message}
               help="De 3 a 100 caracteres, com pelo menos duas palavras e sem números."
               {...register('name')}

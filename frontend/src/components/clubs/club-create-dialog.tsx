@@ -87,7 +87,6 @@ export function ClubCreateDialog({
             label="Nome"
             icon={Shield}
             autoComplete="organization"
-            maxLength={60}
             error={errors.name?.message}
             help="De 3 a 60 caracteres e de 2 a 5 palavras; só letras, espaços, hífen e ponto. Não pode repetir outro clube."
             {...register('name')}
