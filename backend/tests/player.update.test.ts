@@ -97,6 +97,20 @@ async function playerRow() {
 }
 
 describe('PUT /api/v1/players/{id} — RN08, V1–V9', () => {
+  it('V4/RN08: edita nome no limite sem truncar sua versão de busca expandida', async () => {
+    const name = `${'가'.repeat(49)} ${'나'.repeat(50)}`;
+    const response = await request(app)
+      .put('/api/v1/players/1')
+      .send({ ...updateBody, name });
+    expect(response.status).toBe(200);
+    expect(response.body.name).toBe(name);
+    expect(await playerRow()).toMatchObject({
+      nome: name,
+      nome_busca: `${'가'.repeat(49)} ${'나'.repeat(50)}`,
+      valor_base: '40.00',
+    });
+  });
+
   it('edita os quatro campos e recalcula overall/mercado sem mudar base, indicadores ou potencial', async () => {
     const response = await request(app).put('/api/v1/players/1').send({
       name: '  Méia   Zeta  ',

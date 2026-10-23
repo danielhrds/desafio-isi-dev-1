@@ -71,6 +71,54 @@ async function clubRows() {
 }
 
 describe('POST /api/v1/clubs — RN10, V1–V7 e B09', () => {
+  it.each([
+    [
+      'nome de busca expandido',
+      `A${'가'.repeat(55)} BCD`,
+      'ABC',
+      `a${'가'.repeat(55)} bcd`,
+      `a${'가'.repeat(55)} bcd`,
+      'ABD',
+    ],
+    [
+      'nome em minúsculas expandido',
+      `İ${'A'.repeat(55)} BCD`,
+      'IBC',
+      `i\u0307${'a'.repeat(55)} bcd`,
+      `i${'a'.repeat(55)} bcd`,
+      'IBD',
+    ],
+  ])(
+    'V4/RN10: preserva %s além de 60 caracteres auxiliares e mantém unicidade',
+    async (
+      _label,
+      name,
+      acronym,
+      normalizedName,
+      searchName,
+      duplicateAcronym,
+    ) => {
+      const created = await request(app)
+        .post('/api/v1/clubs')
+        .send({ name, acronym });
+      expect(created.status).toBe(201);
+      expect(created.body.name).toBe(name);
+      expect(await clubRows()).toEqual([
+        expect.objectContaining({
+          nome: name,
+          nome_normalizado: normalizedName,
+          nome_busca: searchName,
+        }),
+      ]);
+      const duplicate = await request(app).post('/api/v1/clubs').send({
+        name: name.toUpperCase(),
+        acronym: duplicateAcronym,
+      });
+      expect(duplicate.status).toBe(409);
+      expect(await clubRows()).toHaveLength(1);
+    },
+  );
+
   it('cria com 300 moedas, normaliza nome e ignora campos controlados', async () => {
     const response = await request(app).post('/api/v1/clubs').send({
       name: '  Águias   FC  ',
@@ -133,6 +181,10 @@ describe('POST /api/v1/clubs — RN10, V1–V7 e B09', () => {
     ['uma palavra', { name: 'Águias', acronym: 'AGU' }],
     ['seis palavras', { name: 'A B C D E F', acronym: 'ABC' }],
     ['61 pontos de código', { name: `A ${'B'.repeat(59)}`, acronym: 'ABB' }],
+    [
+      '61 pontos de código suplementares',
+      { name: `A${'𐐀'.repeat(57)} BC`, acronym: 'ABC' },
+    ],
     ['nome com dígito', { name: 'Águias 2', acronym: 'AGU' }],
     ['controle', { name: 'Águias\tFC', acronym: 'AGU' }],
     ['palavra sem letra', { name: 'Águias -', acronym: 'AGU' }],

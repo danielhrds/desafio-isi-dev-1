@@ -75,6 +75,30 @@ async function playerCount(): Promise<number> {
 }
 
 describe('POST /api/v1/players — B01, B03, RN02–RN06', () => {
+  it('V4/RN07: persiste e encontra nome de 100 caracteres cuja busca normalizada tem 199', async () => {
+    const name = `${'가'.repeat(49)} ${'나'.repeat(50)}`;
+    const searchName = `${'가'.repeat(49)} ${'나'.repeat(50)}`;
+    const created = await request(app)
+      .post('/api/v1/players')
+      .send({ ...validPlayer, name });
+
+    expect(created.status).toBe(201);
+    expect(created.body.name).toBe(name);
+    const rows = await database.query<{ nome: string; nome_busca: string }>(
+      'SELECT nome, nome_busca FROM jogadores',
+      { type: QueryTypes.SELECT },
+    );
+    expect(rows).toEqual([{ nome: name, nome_busca: searchName }]);
+    const listed = await request(app)
+      .get('/api/v1/players')
+      .query({ search: name });
+    expect(listed.status).toBe(200);
+    expect(
+      listed.body.data.map((player: { name: string }) => player.name),
+    ).toEqual([name]);
+    expect(listed.body.meta.total_items).toBe(1);
+  });
+
   it('cria jogador APTO e livre, normaliza nome, ignora campos controlados e calcula valores', async () => {
     const response = await request(app)
       .post('/api/v1/players')
@@ -191,6 +215,10 @@ describe('POST /api/v1/players — B01, B03, RN02–RN06', () => {
       'nome com 101 pontos de código',
       { ...validPlayer, name: `A ${'á'.repeat(99)}` },
     ],
+    [
+      'nome com 101 pontos de código suplementares',
+      { ...validPlayer, name: `A ${'𐐀'.repeat(99)}` },
+    ],
   ])('recusa %s sem gravar nada', async (_label, body) => {
     const response = await request(app).post('/api/v1/players').send(body);
     expect(response.status).toBe(400);
@@ -234,6 +262,10 @@ describe('POST /api/v1/players — B01, B03, RN02–RN06', () => {
     [
       'nome com 100 pontos de código',
       { ...validPlayer, name: `A ${'á'.repeat(98)}` },
+    ],
+    [
+      'nome com 100 pontos de código suplementares',
+      { ...validPlayer, name: `A ${'𐐀'.repeat(98)}` },
     ],
     [
       'soma dos seis atributos igual a 480',
