@@ -82,7 +82,7 @@ export const openApiDocument = {
     title: 'Passe API',
     version: '0.1.0',
     description:
-      'Contratos da API serão adicionados conforme os módulos forem implementados.',
+      'API de jogadores, clubes, transferências, escalações, partidas e classificação da liga.',
   },
   servers: [{ url: 'http://localhost:3000/api/v1' }],
   components: {
