@@ -11,10 +11,10 @@ module.exports = {
           },
           nome: { type: Sequelize.STRING(60), allowNull: false },
           nome_normalizado: {
-            type: Sequelize.STRING(60),
+            type: Sequelize.TEXT,
             allowNull: false,
           },
-          nome_busca: { type: Sequelize.STRING(60), allowNull: false },
+          nome_busca: { type: Sequelize.TEXT, allowNull: false },
           sigla: {
             type: Sequelize.CHAR(3),
             allowNull: false,
@@ -56,7 +56,7 @@ module.exports = {
             autoIncrement: true,
           },
           nome: { type: Sequelize.STRING(100), allowNull: false },
-          nome_busca: { type: Sequelize.STRING(100), allowNull: false },
+          nome_busca: { type: Sequelize.TEXT, allowNull: false },
           posicao: { type: Sequelize.STRING(3), allowNull: false },
           agilidade: { type: Sequelize.INTEGER, allowNull: false },
           idade: { type: Sequelize.INTEGER, allowNull: false },

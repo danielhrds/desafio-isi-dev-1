@@ -28,12 +28,12 @@ Club.init(
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     name: { type: DataTypes.STRING(60), allowNull: false, field: 'nome' },
     normalizedName: {
-      type: DataTypes.STRING(60),
+      type: DataTypes.TEXT,
       allowNull: false,
       field: 'nome_normalizado',
     },
     searchName: {
-      type: DataTypes.STRING(60),
+      type: DataTypes.TEXT,
       allowNull: false,
       field: 'nome_busca',
     },

@@ -40,7 +40,7 @@ Player.init(
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     name: { type: DataTypes.STRING(100), allowNull: false, field: 'nome' },
     searchName: {
-      type: DataTypes.STRING(100),
+      type: DataTypes.TEXT,
       allowNull: false,
       field: 'nome_busca',
     },
