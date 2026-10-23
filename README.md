@@ -212,3 +212,11 @@ As versões exatas das dependências estão nos arquivos `package-lock.json` de 
 ## Funcionalidades não implementadas
 
 Nenhuma.
+
+## Uso de inteligência artificial
+
+Utilizei o Codex como apoio no desenvolvimento do backend e do frontend, na criação de testes, migrations, configurações e documentação. A ferramenta foi usada para propor e implementar soluções, auxiliar na revisão do código e verificar o atendimento aos requisitos.
+
+Conduzi as principais decisões de escopo e tecnologia. A revisão dos serviços do backend e dos fluxos do frontend também contou com auxílio da ferramenta, com discussão das alternativas e solicitação de ajustes.
+
+Os testes, as configurações como `compose.yaml` e `tsconfig.json`, as migrations, os componentes da interface e sua estilização foram feitos pelo Codex. A ferramenta também foi utilizada na execução dos testes e na conferência da integração entre frontend, API e banco de dados.
