@@ -14,6 +14,7 @@ const jsonParser = express.json();
 const requestsWithoutBody = new Set(['GET', 'HEAD', 'DELETE']);
 const playerSalePath = /^\/api\/v1\/players\/[^/]+\/sell\/?$/i;
 
+app.use(morgan('[:date[iso]] :method :url :status'));
 app.use(
   cors({
     origin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173',
@@ -31,7 +32,6 @@ app.use((request, response, next) => {
 
   jsonParser(request, response, next);
 });
-app.use(morgan('[:date[iso]] :method :url :status'));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
 app.get('/api/v1/health', (_request, response) => {
