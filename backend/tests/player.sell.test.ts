@@ -5,6 +5,7 @@ import type { Express } from 'express';
 import { DateTime } from 'luxon';
 import { QueryTypes, Sequelize } from 'sequelize';
 import request, { type Response } from 'supertest';
+import { resetTestDatabase } from './helpers/reset-test-database.js';
 
 const execFileAsync = promisify(execFile);
 const originalDatabaseUrl = process.env.DATABASE_URL;
@@ -64,9 +65,7 @@ beforeAll(async () => {
 afterEach(async () => {
   vi.restoreAllMocks();
   if (database) {
-    await database.query(
-      'TRUNCATE TABLE escalacoes, transacoes, contratos, jogadores, clubes RESTART IDENTITY CASCADE',
-    );
+    await resetTestDatabase(database);
   }
 });
 

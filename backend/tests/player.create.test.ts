@@ -4,6 +4,7 @@ import { promisify } from 'node:util';
 import { QueryTypes, Sequelize } from 'sequelize';
 import request from 'supertest';
 import type { Express } from 'express';
+import { resetTestDatabase } from './helpers/reset-test-database.js';
 
 const execFileAsync = promisify(execFile);
 const originalDatabaseUrl = process.env.DATABASE_URL;
@@ -47,10 +48,7 @@ beforeAll(async () => {
 }, 60_000);
 
 afterEach(async () => {
-  if (database)
-    await database.query(
-      'TRUNCATE TABLE jogadores, clubes RESTART IDENTITY CASCADE',
-    );
+  if (database) await resetTestDatabase(database);
 });
 
 afterAll(async () => {

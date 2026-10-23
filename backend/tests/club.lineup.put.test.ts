@@ -6,6 +6,7 @@ import { QueryTypes, Sequelize } from 'sequelize';
 import request from 'supertest';
 import type { ClubCreate } from '../src/repositories/club.repository.js';
 import type { PlayerCreate } from '../src/repositories/player.repository.js';
+import { resetTestDatabase } from './helpers/reset-test-database.js';
 
 const execFileAsync = promisify(execFile);
 const originalDatabaseUrl = process.env.DATABASE_URL;
@@ -70,9 +71,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
   if (database) {
-    await database.query(
-      'TRUNCATE TABLE escalacoes, transacoes, contratos, jogadores, clubes RESTART IDENTITY CASCADE',
-    );
+    await resetTestDatabase(database);
   }
 });
 
