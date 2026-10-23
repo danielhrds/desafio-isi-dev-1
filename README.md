@@ -114,11 +114,11 @@ Vitest e Supertest cobrem cálculos, incluindo valor de mercado, endpoints e per
 docker compose exec -T frontend npm run test
 ```
 
-Vitest e Testing Library verificam componentes, hooks e serviços, com API simulada.
+Vitest e Testing Library verificam componentes, hooks e serviços, com API simulada. Esse é o comando principal de testes do frontend.
 
-### Frontend: navegador
+### Frontend: navegador (opcional)
 
-Execute em Bash, com o frontend iniciado. O Playwright usa Chromium na imagem oficial e inclui cenários em 375 px:
+Para executar os cenários adicionais do Playwright, use Bash, com o frontend iniciado. Eles usam Chromium na imagem oficial e incluem cenários em 375 px. A primeira execução também baixa a imagem:
 
 ```bash
 docker run --rm --init --ipc=host \
